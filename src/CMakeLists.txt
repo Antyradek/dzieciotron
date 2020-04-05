@@ -1,5 +1,11 @@
 file(GLOB SOURCES *.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES}) 
+
+# który mamy rok, przypomnij?
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
-target_link_libraries(${PROJECT_NAME} opencv_core)
+
+# czasami OpenCV instaluje się w dziwnych miejscach
+target_include_directories(${PROJECT_NAME} PRIVATE /usr/include/opencv4)
+
+target_link_libraries(${PROJECT_NAME} opencv_core opencv_videoio opencv_highgui opencv_imgproc)
