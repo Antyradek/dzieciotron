@@ -12,7 +12,7 @@ int main()
 	
 	cv::VideoCapture videoCapture;
 	videoCapture.setExceptionMode(true);
-	videoCapture.open(0);
+	videoCapture.open(2);
 	
 	cv::Mat oneFrame;
 	
@@ -30,9 +30,23 @@ int main()
 	{
 		videoCapture >> oneFrame;
 		
+		//przerób na inną przestrzeń
+		cv::Mat otherSpaceFrame;
+		cv::cvtColor(oneFrame, otherSpaceFrame, cv::COLOR_BGR2HLS_FULL);
+		
+		//podziel na składowe
+		cv::Mat channels[otherSpaceFrame.channels()];
+		cv::split(otherSpaceFrame, channels);
+		cv::Mat grayscaleFrame = channels[1];
+		
 		//progowanie
 		cv::Mat binaryFrame;
-		cv::threshold(oneFrame, binaryFrame, 30, 255, cv::ThresholdTypes::THRESH_BINARY);
+		cv::threshold(grayscaleFrame, binaryFrame, 245, 255, cv::ThresholdTypes::THRESH_BINARY);
+		
+		//zamknięcie i otwarcie
+		const int kernelSize = 3;
+		cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_CLOSE, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize)));
+		cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_OPEN, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize)));
 		
 		//wyświetl
 		cv::imshow(windowName, binaryFrame);
