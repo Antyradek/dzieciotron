@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
@@ -63,6 +64,8 @@ int main()
 		cv::cvtColor(displayBinary, displayBinary, cv::COLOR_GRAY2BGR);
 		//tablica bierze kolejne kontury w hierarchii
 // 		for(int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+		//tablica do wypełnienia środkami konturów
+		std::vector<cv::Point2f> contourCenters(contours.size());
 		for(size_t idx = 0; idx < contours.size(); idx++)
 		{
 			cv::Scalar color(rand() % 191, rand() % 191, rand() % 191);
@@ -71,7 +74,23 @@ int main()
 			cv::Moments moments = cv::moments(contours[idx], true);
 			double posX = moments.m10 / moments.m00;
 			double posY = moments.m01 / moments.m00;
-			cv::drawMarker(oneFrame, cv::Point(posX, posY), color, cv::MARKER_CROSS, 5);
+			contourCenters[idx] = cv::Point2f(posX, posY);
+			cv::drawMarker(oneFrame, contourCenters[idx], color, cv::MARKER_CROSS, 5);
+		}
+		
+		//klastrowanie
+		if(contourCenters.size() > 0)
+		{
+			//TODO liczba klastrów od 1 do 4
+			//TODO liczba powtórzeń jakaś
+			cv::Mat bestLabels;
+			std::vector<cv::Point2f> clusterCenters;
+			cv::kmeans(contourCenters, std::min<int>(2, contourCenters.size()), bestLabels, cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0), 5, cv::KMEANS_PP_CENTERS, clusterCenters);
+			for(const auto& point : clusterCenters)
+			{
+				cv::Scalar color(rand() % 191, rand() % 191, rand() % 191);
+				cv::drawMarker(oneFrame, point, color, cv::MARKER_DIAMOND);
+			}
 		}
 		
 		//wyświetl
