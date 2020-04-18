@@ -67,6 +67,11 @@ int main()
 		{
 			cv::Scalar color(rand() % 191, rand() % 191, rand() % 191);
 			drawContours(displayBinary, contours, idx, color, -1);
+			
+			cv::Moments moments = cv::moments(contours[idx], true);
+			double posX = moments.m10 / moments.m00;
+			double posY = moments.m01 / moments.m00;
+			cv::drawMarker(oneFrame, cv::Point(posX, posY), color, cv::MARKER_CROSS, 5);
 		}
 		
 		//wyświetl
