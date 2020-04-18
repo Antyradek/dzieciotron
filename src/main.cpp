@@ -48,8 +48,25 @@ int main()
 		cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_CLOSE, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize)));
 		cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_OPEN, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize)));
 		
+		//kontury
+		std::vector<std::vector<cv::Point>> contours;
+		std::vector<cv::Vec4i> hierarchy;
+		cv::findContours(binaryFrame, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+		
+		//narysuj kontury
+		srand(0);
+		cv::Mat displayBinary(binaryFrame);
+		cv::cvtColor(displayBinary, displayBinary, cv::COLOR_GRAY2BGR);
+		for(int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+		{
+			cv::Scalar color(rand() % 191, rand() % 191, rand() % 191);
+			drawContours(displayBinary, contours, idx, color, -1);
+		}
+		
 		//wyświetl
-		cv::imshow(windowName, binaryFrame);
+		cv::Mat displayFrame;
+		cv::hconcat(oneFrame, displayBinary, displayFrame);
+		cv::imshow(windowName, displayFrame);
 		
 		//steruje FPS
 		if(cv::waitKey(5) >= 0)
