@@ -49,15 +49,21 @@ int main()
 		cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_OPEN, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize)));
 		
 		//kontury
+		//NOTE kontury to zestawy zestawów punktów 2D, które są wokół znalezionego obszaru
 		std::vector<std::vector<cv::Point>> contours;
+		//NOTE zbiór ustalający kolejność konturów, każdy wektor zawiera 4 elementy oznaczające indeksy: kolejny, poprzedni, rodzica i dziecko
 		std::vector<cv::Vec4i> hierarchy;
-		cv::findContours(binaryFrame, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+		//TODO dokładniejszy sposób obliczeń dla obwarzanków
+		//NOTE druga część to aproksymacja czy trzymać wszystkie piksele czy tylko otoczkę
+		cv::findContours(binaryFrame, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 		
 		//narysuj kontury
 		srand(0);
 		cv::Mat displayBinary(binaryFrame);
 		cv::cvtColor(displayBinary, displayBinary, cv::COLOR_GRAY2BGR);
-		for(int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+		//tablica bierze kolejne kontury w hierarchii
+// 		for(int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+		for(size_t idx = 0; idx < contours.size(); idx++)
 		{
 			cv::Scalar color(rand() % 191, rand() % 191, rand() % 191);
 			drawContours(displayBinary, contours, idx, color, -1);
