@@ -5,7 +5,17 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <time.h>
+#include <signal.h>
+
 #include "exceptions.hpp"
+
+static void setSize(cv::VideoCapture& videoCapture, int width, int height, int fps)
+{
+	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, width);
+	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, height);
+	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, fps);
+}
 
 int main()
 {
@@ -27,9 +37,38 @@ int main()
 	const std::string windowName = "Podgląd kamery";
 	cv::namedWindow(windowName);
 	
+	timer_t fpsTimer;
+	struct sigevent timerEvent = {};
+	timerEvent.sigev_notify = SIGEV_NONE;
+	if(timer_create(CLOCK_REALTIME, &timerEvent, &fpsTimer) != 0)
+	{
+		throw(TimerError("Błąd inicjalizacji"));
+	}
+	struct itimerspec timerTime = {};
+	timerTime.it_value.tv_sec = 1;
+	timerTime.it_interval.tv_sec = 1;
+	if(timer_settime(fpsTimer, 0, &timerTime, nullptr) != 0)
+	{
+		throw(TimerError("Błąd ustawiania"));
+	}
+	
+	setSize(videoCapture, 1920, 1080, 30);
+// 	setSize(videoCapture, 1028, 720, 30);
+// 	setSize(videoCapture, 2048, 1536, 30);
+// 	setSize(videoCapture, 320, 240, 30);
+	
+	std::cout << "Rozmiar: " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << " " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " FPS" << std::endl;
+	
+	int frameCounter = 0;
+	long lastTimerValue = 0;
 	while(true)
 	{
+		frameCounter++;
 		videoCapture >> oneFrame;
+		
+		//zmień rozmiar, obraz jest zawsze 4:3, ale czasami rozciągnięty
+		const int properWidth = 4.0/3.0 * oneFrame.rows;
+		cv::resize(oneFrame, oneFrame, cv::Size(), 1.0 * properWidth / oneFrame.cols, 1);
 		
 		//przerób na inną przestrzeń
 		cv::Mat otherSpaceFrame;
@@ -103,6 +142,19 @@ int main()
 		{
 			break;
 		}
+		
+		//oblicza FPS
+		struct itimerspec retTime;
+		timer_gettime(fpsTimer, &retTime);
+		if(lastTimerValue < retTime.it_value.tv_nsec)
+		{
+			std::cout << (1.0e9 * frameCounter / ((retTime.it_interval.tv_sec * 1.0e9 + retTime.it_interval.tv_nsec) - lastTimerValue)) << " FPS" << std::endl;
+			frameCounter = 0;
+		}
+		lastTimerValue = retTime.it_value.tv_nsec;
+		
+		
 	}
+	timer_delete(fpsTimer);
 	
 }
