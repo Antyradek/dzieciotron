@@ -9,4 +9,4 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werr
 # czasami OpenCV instaluje się w dziwnych miejscach
 target_include_directories(${PROJECT_NAME} PRIVATE /usr/include/opencv4)
 
-target_link_libraries(${PROJECT_NAME} opencv_core opencv_videoio opencv_highgui opencv_imgproc rt)
+target_link_libraries(${PROJECT_NAME} opencv_core opencv_videoio opencv_highgui opencv_imgproc rt boost_program_options)

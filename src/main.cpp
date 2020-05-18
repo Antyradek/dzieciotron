@@ -1,14 +1,16 @@
 #include <iostream>
 #include <algorithm>
+#include <ctime>
+#include <csignal>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include <time.h>
-#include <signal.h>
+#include <boost/program_options.hpp>
 
 #include "exceptions.hpp"
+#include "logger.hpp"
 
 static void setSize(cv::VideoCapture& videoCapture, int width, int height, int fps)
 {
@@ -17,22 +19,87 @@ static void setSize(cv::VideoCapture& videoCapture, int width, int height, int f
 	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, fps);
 }
 
-int main()
+namespace po = boost::program_options;
+
+const std::string helpText = "help";
+const std::string fileText = "file";
+const std::string cametaText = "camera";
+const std::string outputText = "output";
+using namespace dzieciotron;
+
+int main(int argc, char** argv)
 {
-	std::cout << "Dzieńdoberek" << std::endl;
+	po::options_description description("Opcje");
+	description.add_options()
+		(helpText.c_str(), "Wypisz pomoc")
+		(fileText.c_str(), po::value<std::string>(), "Wczytaj dane z pliku wideo")
+		(cametaText.c_str(), po::value<unsigned int>(), "Użyj tej kamery")
+		(outputText.c_str(), po::value<std::string>(), "Zapisz dane do pliku wideo")
+	;
+	po::variables_map variables;
+	po::store(po::parse_command_line(argc, argv, description), variables);
+	po::notify(variables);
 	
+	if(variables.count(helpText) > 0)
+	{
+		std::cout << description << std::endl;
+		return(0);
+	}
+	
+	//główne połączenie z kamerą lub plikiem wideo
 	cv::VideoCapture videoCapture;
 	videoCapture.setExceptionMode(true);
-	videoCapture.open(2);
 	
-	cv::Mat oneFrame;
+	//główny wypisywacz
+	cv::VideoWriter videoWriter;
 	
-	//odczyt
-	videoCapture >> oneFrame;
-	if(oneFrame.empty())
+	if(variables.count(fileText) > 0)
 	{
-		throw(CameraError("Pusty obraz"));
+		const std::string filename = variables[fileText].as<std::string>();
+		Logger::debug() << "Odczyt z pliku: " << filename;
+		videoCapture.open(filename);
 	}
+	else
+	{
+		unsigned int cameraId = 2;
+		
+		if(variables.count(cametaText) > 0)
+		{
+			cameraId = variables[cametaText].as<unsigned int>();
+		}
+				
+		Logger::debug() << "Otwieranie kamery " << cameraId;
+		videoCapture.open(cameraId, cv::VideoCaptureAPIs::CAP_V4L2);
+		
+		//odczyt pierwszej ramki
+		cv::Mat firstFrame;
+		videoCapture >> firstFrame;
+		if(firstFrame.empty())
+		{
+			throw(CameraError("Pusty obraz"));
+		}
+		
+// 			setSize(videoCapture, 1920, 1080, 30);
+// 			setSize(videoCapture, 1028, 720, 30);
+		// 	setSize(videoCapture, 2048, 1536, 30);
+// 		setSize(videoCapture, 320, 240, 30);
+		setSize(videoCapture, 1280, 720, 30);
+		videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+		(void) setSize;
+	}
+	
+	if(variables.count(outputText) > 0)
+	{
+		const std::string outputFilename = variables[outputText].as<std::string>();
+		
+		Logger::debug() << "Wyjście wideo będzie do " << outputFilename;
+		const int width = videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH);
+		const int height = videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT);
+		
+		//rozmiar zależy od wyjściowych kawałków
+		videoWriter.open(outputFilename, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30, cv::Size(width * 2, height));
+	}
+	
 	
 	const std::string windowName = "Podgląd kamery";
 	cv::namedWindow(windowName);
@@ -52,23 +119,32 @@ int main()
 		throw(TimerError("Błąd ustawiania"));
 	}
 	
-	setSize(videoCapture, 1920, 1080, 30);
-// 	setSize(videoCapture, 1028, 720, 30);
-// 	setSize(videoCapture, 2048, 1536, 30);
-// 	setSize(videoCapture, 320, 240, 30);
-	
 	std::cout << "Rozmiar: " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << " " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " FPS" << std::endl;
 	
-	int frameCounter = 0;
+	int fpsFrameCounter = 0;
 	long lastTimerValue = 0;
+	uintmax_t frameCounter = 0;
+	cv::Mat oneFrame;
 	while(true)
 	{
+		try
+		{
+			videoCapture >> oneFrame;
+		}
+		catch(const cv::Exception& ex)
+		{
+			Logger::debug() << "Koniec wejścia";
+			Logger::debug() << "Przeczytano ramek: " << frameCounter;
+			break;
+		}
+		
+		fpsFrameCounter++;
 		frameCounter++;
-		videoCapture >> oneFrame;
+		
 		
 		//zmień rozmiar, obraz jest zawsze 4:3, ale czasami rozciągnięty
-		const int properWidth = 4.0/3.0 * oneFrame.rows;
-		cv::resize(oneFrame, oneFrame, cv::Size(), 1.0 * properWidth / oneFrame.cols, 1);
+// 		const int properWidth = 4.0/3.0 * oneFrame.rows;
+// 		cv::resize(oneFrame, oneFrame, cv::Size(), 1.0 * properWidth / oneFrame.cols, 1);
 		
 		//przerób na inną przestrzeń
 		cv::Mat otherSpaceFrame;
@@ -97,7 +173,7 @@ int main()
 		//NOTE druga część to aproksymacja czy trzymać wszystkie piksele czy tylko otoczkę
 		cv::findContours(binaryFrame, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 		
-		//narysuj kontury
+		//narysuj kontury i oblicz środki
 		srand(0);
 		cv::Mat displayBinary(binaryFrame);
 		cv::cvtColor(displayBinary, displayBinary, cv::COLOR_GRAY2BGR);
@@ -129,6 +205,7 @@ int main()
 			{
 				cv::Scalar color(rand() % 191, rand() % 191, rand() % 191);
 				cv::drawMarker(oneFrame, point, color, cv::MARKER_DIAMOND);
+				cv::drawMarker(displayBinary, point, cv::Scalar(255, 255, 255), cv::MARKER_DIAMOND);
 			}
 		}
 		
@@ -136,6 +213,12 @@ int main()
 		cv::Mat displayFrame;
 		cv::hconcat(oneFrame, displayBinary, displayFrame);
 		cv::imshow(windowName, displayFrame);
+		
+		//zapisz
+		if(videoWriter.isOpened())
+		{
+			videoWriter.write(displayFrame);
+		}
 		
 		//steruje FPS
 		if(cv::waitKey(5) >= 0)
@@ -148,8 +231,8 @@ int main()
 		timer_gettime(fpsTimer, &retTime);
 		if(lastTimerValue < retTime.it_value.tv_nsec)
 		{
-			std::cout << (1.0e9 * frameCounter / ((retTime.it_interval.tv_sec * 1.0e9 + retTime.it_interval.tv_nsec) - lastTimerValue)) << " FPS" << std::endl;
-			frameCounter = 0;
+			std::cout << "\e[G\e[K" << (1.0e9 * fpsFrameCounter / ((retTime.it_interval.tv_sec * 1.0e9 + retTime.it_interval.tv_nsec) - lastTimerValue)) << " FPS" << std::flush;
+			fpsFrameCounter = 0;
 		}
 		lastTimerValue = retTime.it_value.tv_nsec;
 		
