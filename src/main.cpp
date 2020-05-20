@@ -1,7 +1,9 @@
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <ctime>
 #include <csignal>
+#include <map>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
@@ -25,7 +27,36 @@ const std::string helpText = "help";
 const std::string fileText = "file";
 const std::string cametaText = "camera";
 const std::string outputText = "output";
+const std::string markerText = "markerfile";
 using namespace dzieciotron;
+
+/// Jeden rekord do jednej ramki z pliku do oznaczania markerów
+struct MarkerRecord
+{
+	struct MarkerPosition
+	{
+		double x;
+		double y;
+	};
+	
+	enum class MarkerType
+	{
+		WristLeft,
+		WristRight,
+		AnkleLeft,
+		AnkleRight
+	};
+	
+	typedef std::map<MarkerType, MarkerPosition> MarkersMapType;
+	MarkersMapType markers;
+};
+
+const std::map<std::string, MarkerRecord::MarkerType> markerTranslationMap({
+	{"ankle_left", MarkerRecord::MarkerType::AnkleLeft},
+	{"ankle_right", MarkerRecord::MarkerType::AnkleRight},
+	{"wrist_left", MarkerRecord::MarkerType::WristLeft},
+	{"wrist_right", MarkerRecord::MarkerType::WristRight}
+});
 
 int main(int argc, char** argv)
 {
@@ -35,6 +66,7 @@ int main(int argc, char** argv)
 		(fileText.c_str(), po::value<std::string>(), "Wczytaj dane z pliku wideo")
 		(cametaText.c_str(), po::value<unsigned int>(), "Użyj tej kamery")
 		(outputText.c_str(), po::value<std::string>(), "Zapisz dane do pliku wideo")
+		(markerText.c_str(), po::value<std::string>(), "Narysuj markery z podanego pliku")
 	;
 	po::variables_map variables;
 	po::store(po::parse_command_line(argc, argv, description), variables);
@@ -88,6 +120,7 @@ int main(int argc, char** argv)
 		(void) setSize;
 	}
 	
+	//wyjście wideo
 	if(variables.count(outputText) > 0)
 	{
 		const std::string outputFilename = variables[outputText].as<std::string>();
@@ -98,6 +131,54 @@ int main(int argc, char** argv)
 		
 		//rozmiar zależy od wyjściowych kawałków
 		videoWriter.open(outputFilename, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30, cv::Size(width * 2, height));
+	}
+	
+	//markery
+	std::vector<MarkerRecord> markers;
+	if(variables.count(markerText) > 0)
+	{
+		const std::string markerFile = variables[markerText].as<std::string>();
+		
+		std::ifstream file;
+		//TODO pełne wsparcie wyjątków
+		file.exceptions(std::ifstream::badbit);
+		file.open(markerFile);
+		
+		std::string line;
+		int lastframeNo = -1;
+		while(std::getline(file, line))
+		{
+			int frameNo;
+			std::string lineId;
+			double x;
+			double y;
+			double z;
+			double screenX;
+			double screenY;
+			
+			std::istringstream ss(line);
+			
+			ss >> frameNo >> lineId >> x >> y >> z >> screenX >> screenY;
+			
+			if(lastframeNo != frameNo)
+			{
+				Logger::debug() << "Klatka " << frameNo;
+				lastframeNo = frameNo;
+				
+				markers.push_back(MarkerRecord());
+			}
+			
+			Logger::debug() << "Wczytywanie rekordu: " << frameNo << " " << lineId << " " << screenX << " " << screenY;
+			
+			MarkerRecord::MarkerPosition position;
+			position.x = screenX;
+			//pion jest odwrócony
+			position.y = 1 - screenY;
+			MarkerRecord::MarkerType markerType = markerTranslationMap.at(lineId);
+			
+			markers.back().markers[markerType] = position;
+		}
+		
 	}
 	
 	
@@ -139,7 +220,6 @@ int main(int argc, char** argv)
 		}
 		
 		fpsFrameCounter++;
-		frameCounter++;
 		
 		
 		//zmień rozmiar, obraz jest zawsze 4:3, ale czasami rozciągnięty
@@ -200,12 +280,32 @@ int main(int argc, char** argv)
 			//TODO liczba powtórzeń jakaś
 			cv::Mat bestLabels;
 			std::vector<cv::Point2f> clusterCenters;
-			cv::kmeans(contourCenters, std::min<int>(2, contourCenters.size()), bestLabels, cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0), 5, cv::KMEANS_PP_CENTERS, clusterCenters);
+			cv::kmeans(contourCenters, std::min<int>(4, contourCenters.size()), bestLabels, cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0), 5, cv::KMEANS_PP_CENTERS, clusterCenters);
 			for(const auto& point : clusterCenters)
 			{
+				//narysuj markery
 				cv::Scalar color(rand() % 191, rand() % 191, rand() % 191);
 				cv::drawMarker(oneFrame, point, color, cv::MARKER_DIAMOND);
+				//TODO biały kolor jako stała
 				cv::drawMarker(displayBinary, point, cv::Scalar(255, 255, 255), cv::MARKER_DIAMOND);
+			}
+		}
+		
+		//oznaczenie markerów z pliku
+		
+		if(markers.size() > frameCounter)
+		{
+			MarkerRecord record = markers.at(frameCounter);
+			for(const MarkerRecord::MarkersMapType::value_type& pair : record.markers)
+			{
+				Logger::debug() << "Markerów " << markers.size();
+				const int x = pair.second.x * displayBinary.cols;
+				const int y = pair.second.y * displayBinary.rows;
+				
+				//TODO pomarańczowy jako stała
+				cv::drawMarker(displayBinary, cv::Point2f(x, y), cv::Scalar(0, 128, 255), cv::MARKER_DIAMOND);
+				
+				Logger::debug() << "Marker " << x << y;
 			}
 		}
 		
@@ -236,7 +336,8 @@ int main(int argc, char** argv)
 		}
 		lastTimerValue = retTime.it_value.tv_nsec;
 		
-		
+		//ostatnie zwiększenie ramki
+		frameCounter++;
 	}
 	timer_delete(fpsTimer);
 	
