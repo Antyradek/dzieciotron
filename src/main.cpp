@@ -1,6 +1,5 @@
 // #include <iostream>
 // #include <fstream>
-// #include <algorithm>
 // #include <ctime>
 #include <csignal>
 #include <cstring>
@@ -8,6 +7,7 @@
 #include <future>
 #include <functional>
 #include <array>
+#include <algorithm>
 
 // #include <opencv2/videoio.hpp>
 // #include <opencv2/highgui.hpp>
@@ -371,11 +371,11 @@ int main()
 	locationer::Locationer locationer(centerResult);
 	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 2> tasks {{centerPipeline, locationer}};
 	
-	//handler sygnału
+	//obsługa sygnału
 	globals::exitCallback = [&tasks](){
-		for(auto& task: tasks)
+		for(dzieciotron::AsyncTask& task: tasks)
 		{
-			task.get().stop();
+			task.stop();
 		}
 	};
 	signal(SIGINT, globals::signalCallback);
@@ -383,16 +383,16 @@ int main()
 	
 	//wystartuj
 	std::array<std::future<void>, tasks.size()> futures;
-	for(size_t i = 0; i < futures.size(); i++)
-	{
-		dzieciotron::AsyncTask& task = tasks[i];
-		futures[i] = std::async(std::launch::async, [&task](){
+	//dla każdego elementu w tablicy zadań, wywołaj funkcję, która stworzy przyszłościowe zadanie i wsadzi do drugiej tablicy
+	std::transform(tasks.begin(), tasks.end(), futures.begin(), [](dzieciotron::AsyncTask& task) -> std::future<void>{
+		//wystartuj zadanie w osobnym wątku
+		return(std::async(std::launch::async, [&task](){
 			task.run();
-		});
-	}
+		}));
+	});
 	
 	//czekaj na zakończenie
-	for(auto& future: futures)
+	for(std::future<void>& future: futures)
 	{
 		future.get();
 	}
