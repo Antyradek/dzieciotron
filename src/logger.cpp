@@ -1,7 +1,7 @@
 #include "logger.hpp" 
 #include <iostream>
 
-using namespace dzieciotron;
+using namespace utils;
 
 Logger::Logger(Logger::LoggerContext context): context(context) { }
 
@@ -13,6 +13,11 @@ Logger::~Logger()
 Logger Logger::debug()
 {
 	return(Logger(LoggerContext::Debug));
+}
+
+Logger Logger::info()
+{
+	return(Logger(LoggerContext::Info));
 }
 
 

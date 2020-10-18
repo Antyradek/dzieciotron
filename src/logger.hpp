@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 
-namespace dzieciotron
+namespace utils
 {
 
 /// Proste logowanie zdarzeń
@@ -29,8 +29,11 @@ public:
 	/// Zwraca logger debugujący
 	static Logger debug();
 	
+	/// Zwraca logger informujący
+	static Logger info();
+	
 	/// Wypisuje nową linię
-	~Logger();
+	virtual ~Logger();
 	
 private:
 	/// Kontekst wypisywania
