@@ -32,6 +32,9 @@ public:
 	/// Zwraca logger informujący
 	static Logger info();
 	
+	/// Zwraca logger z błędem
+	static Logger error();
+	
 	/// Wypisuje nową linię
 	virtual ~Logger();
 	

@@ -5,5 +5,5 @@
 namespace defines
 {
 	/// Plik centralnej kamery
-	const std::string centerCameraFile = "/dev/camera1";
+	const std::string centerCameraFile = "/dev/video0";
 }

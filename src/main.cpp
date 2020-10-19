@@ -9,9 +9,7 @@
 #include <array>
 #include <algorithm>
 
-// #include <opencv2/videoio.hpp>
 // #include <opencv2/highgui.hpp>
-// #include <opencv2/imgproc.hpp>
 // 
 // #include <boost/program_options.hpp>
 // 
@@ -85,9 +83,7 @@ using namespace utils;
 // 		return(0);
 // 	}
 // 	
-// 	//główne połączenie z kamerą lub plikiem wideo
-// 	cv::VideoCapture videoCapture;
-// 	videoCapture.setExceptionMode(true);
+
 // 	
 // 	//główny wypisywacz
 // 	cv::VideoWriter videoWriter;
@@ -365,7 +361,7 @@ static void signalCallback(int signum)
 }
 
 int main()
-{
+{	
 	std::atomic<pipeline::PipelineResult> centerResult;
 	pipeline::Pipeline centerPipeline(defines::centerCameraFile, centerResult);
 	locationer::Locationer locationer(centerResult);

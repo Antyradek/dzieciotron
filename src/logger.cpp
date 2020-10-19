@@ -20,6 +20,11 @@ Logger Logger::info()
 	return(Logger(LoggerContext::Info));
 }
 
+Logger Logger::error()
+{
+	return(Logger(LoggerContext::Error));
+}
+
 
 
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <atomic>
+#include <opencv2/videoio.hpp>
 #include "pipeline_result.hpp"
 #include "task.hpp"
 
@@ -18,6 +19,12 @@ private:
 	
 	/// Miejsce gdzie wsadzamy rezultat
 	std::atomic<PipelineResult>& pipelineResult;
+	
+	//główne połączenie z kamerą lub plikiem wideo
+	cv::VideoCapture videoCapture;
+	
+	//FIXME
+	cv::VideoWriter videoWriter;
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
