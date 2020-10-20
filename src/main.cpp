@@ -362,7 +362,7 @@ static void signalCallback(int signum)
 
 int main()
 {	
-	std::atomic<pipeline::PipelineResult> centerResult;
+	pipeline::AtomicPipelineResult centerResult;
 	pipeline::Pipeline centerPipeline(defines::centerCameraFile, centerResult);
 	locationer::Locationer locationer(centerResult);
 	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 2> tasks {{centerPipeline, locationer}};

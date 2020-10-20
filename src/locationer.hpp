@@ -12,11 +12,11 @@ class Locationer: public dzieciotron::AsyncTask
 {
 private:
 	/// Rezultat przetwarzania środkowej kamery
-	const std::atomic<pipeline::PipelineResult>& centerResult;
+	pipeline::AtomicPipelineResult& centerResult;
 	
 public:
 	/// Oblicza pozycję na podstawie rezultatów
-	Locationer(const std::atomic<pipeline::PipelineResult>& centerResult);
+	Locationer(pipeline::AtomicPipelineResult& centerResult);
 	
 	/// Pusty destruktor
 	virtual ~Locationer(){}

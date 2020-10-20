@@ -7,6 +7,7 @@ Logger::Logger(Logger::LoggerContext context): context(context) { }
 
 Logger::~Logger()
 {
+	(void) context;
 	std::cerr << std::endl;
 }
 

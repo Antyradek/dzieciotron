@@ -6,13 +6,17 @@
 using namespace locationer;
 using namespace utils;
 
-Locationer::Locationer(const std::atomic<pipeline::PipelineResult>& centerResult):
+Locationer::Locationer(pipeline::AtomicPipelineResult& centerResult):
 centerResult(centerResult){}
 
 void Locationer::runLoop()
 {
 	Logger::debug() << "Obliczanie lokacji...";
+	pipeline::PipelineResult result(this->centerResult.load());
 	
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	cv::Mat& displayFrame = result.view;
+	fwrite(displayFrame.data, displayFrame.total(), 1, stdout);
+	
+	std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uintmax_t>(1000.0 / defines::viewFps)));
 }
 

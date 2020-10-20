@@ -11,12 +11,11 @@
 using namespace pipeline;
 using namespace utils;
 
-Pipeline::Pipeline(const std::string& cameraFile, std::atomic<PipelineResult>& pipelineResult):
+Pipeline::Pipeline(const std::string& cameraFile, AtomicPipelineResult& pipelineResult):
 dzieciotron::AsyncTask(),
 cameraFile(cameraFile),
 pipelineResult(pipelineResult),
-videoCapture(),
-videoWriter()
+videoCapture()
 {
 	this->videoCapture.setExceptionMode(true);
 	
@@ -31,12 +30,6 @@ videoWriter()
 	{
 		throw(CameraError("Pusty obraz"));
 	}
-// 	const int width = videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH);
-// 	const int height = videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT);
-// 	if(!videoWriter.open("/tmp/out", cv::CAP_FFMPEG, cv::VideoWriter::fourcc('I', 'Y', 'U', 'V'), 60, cv::Size(width, height)))
-// 	{
-// 		throw(OutputError("Nie daje się otworzyć wyjścia"));
-// 	}
 }
 
 void Pipeline::runLoop()
@@ -46,14 +39,15 @@ void Pipeline::runLoop()
 	videoCapture >> oneFrame;
 // 	cv::Mat otherSpaceFrame;
 // 	cv::cvtColor(oneFrame, otherSpaceFrame, cv::COLOR_BGR2YUV_I420);
-// 	fwrite(otherSpaceFrame.data, otherSpaceFrame.total(), 1, stdout);
 	
 	cv::Mat displayFrame;
-	cv::hconcat(oneFrame, oneFrame, displayFrame);
+	displayFrame = oneFrame;
 	cv::cvtColor(displayFrame, displayFrame, cv::COLOR_BGR2YUV_I420);
-	fwrite(displayFrame.data, displayFrame.total(), 1, stdout);
 	
-// 	videoWriter.write(oneFrame);
+	//synchronizuje dane
+	PipelineResult result;
+	result.view = displayFrame;
+	this->pipelineResult.store(result);
 }
 
 

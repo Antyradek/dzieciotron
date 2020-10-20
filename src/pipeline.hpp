@@ -18,17 +18,14 @@ private:
 	std::string cameraFile;
 	
 	/// Miejsce gdzie wsadzamy rezultat
-	std::atomic<PipelineResult>& pipelineResult;
+	AtomicPipelineResult& pipelineResult;
 	
 	//główne połączenie z kamerą lub plikiem wideo
 	cv::VideoCapture videoCapture;
 	
-	//FIXME
-	cv::VideoWriter videoWriter;
-	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
-	Pipeline(const std::string& cameraFile, std::atomic<PipelineResult>& pipelineResult);
+	Pipeline(const std::string& cameraFile, AtomicPipelineResult& pipelineResult);
 	
 	/// Zamyka połączenie do kamer
 	virtual ~Pipeline() {}
