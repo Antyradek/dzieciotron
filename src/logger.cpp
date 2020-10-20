@@ -21,6 +21,11 @@ Logger Logger::info()
 	return(Logger(LoggerContext::Info));
 }
 
+Logger Logger::warning()
+{
+	return(Logger(LoggerContext::Warning));
+}
+
 Logger Logger::error()
 {
 	return(Logger(LoggerContext::Error));

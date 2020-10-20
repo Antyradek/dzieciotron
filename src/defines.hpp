@@ -16,4 +16,7 @@ namespace defines
 	/// Ilość klatek na sekundę podglądu
 	const uintmax_t viewFps = 30;
 	
+	/// Potok do którego zapisujemy podgląd
+	const std::string viewPipe = "/tmp/dzieciotron.fifo";
+	
 }

@@ -37,16 +37,17 @@ void Pipeline::runLoop()
 	//FIXME
 	cv::Mat oneFrame;
 	videoCapture >> oneFrame;
+	Logger::debug() << "Złapano: " << oneFrame.total() << " B";
 // 	cv::Mat otherSpaceFrame;
 // 	cv::cvtColor(oneFrame, otherSpaceFrame, cv::COLOR_BGR2YUV_I420);
 	
 	cv::Mat displayFrame;
-	displayFrame = oneFrame;
-	cv::cvtColor(displayFrame, displayFrame, cv::COLOR_BGR2YUV_I420);
+	cv::cvtColor(oneFrame, displayFrame, cv::COLOR_BGR2YUV_I420);
 	
 	//synchronizuje dane
 	PipelineResult result;
 	result.view = displayFrame;
+	Logger::debug() << "Przekazano: " << result.view.total() << " B";
 	this->pipelineResult.store(result);
 }
 
