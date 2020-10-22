@@ -4,6 +4,7 @@
 #include <opencv2/videoio.hpp>
 #include "pipeline_result.hpp"
 #include "task.hpp"
+#include "defines.hpp"
 
 /// Funkcje do przetwarzania potokowego obszarów z jednej kamery
 namespace pipeline
@@ -15,7 +16,7 @@ class Pipeline: public dzieciotron::AsyncTask
 private:
 	
 	/// Plik odczytu kamery
-	std::string cameraFile;
+	const defines::CameraCaptureParams& params;
 	
 	/// Miejsce gdzie wsadzamy rezultat
 	AtomicPipelineResult& pipelineResult;
@@ -25,7 +26,7 @@ private:
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
-	Pipeline(const std::string& cameraFile, AtomicPipelineResult& pipelineResult);
+	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult);
 	
 	/// Zamyka połączenie do kamer
 	virtual ~Pipeline() {}

@@ -11,6 +11,9 @@ struct PipelineResult
 {
 	/// Podgląd obrazu
 	cv::Mat view;
+	
+	PipelineResult():
+	view() {}
 };
 
 /// Otoczenie rezultatu operacją atomową (std::atomic coś nie chce generować kodu)

@@ -11,25 +11,26 @@
 using namespace pipeline;
 using namespace utils;
 
-Pipeline::Pipeline(const std::string& cameraFile, AtomicPipelineResult& pipelineResult):
+Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult):
 dzieciotron::AsyncTask(),
-cameraFile(cameraFile),
+params(params),
 pipelineResult(pipelineResult),
 videoCapture()
 {
 	this->videoCapture.setExceptionMode(true);
 	
-	//FIXME
-	videoCapture.open(this->cameraFile, cv::VideoCaptureAPIs::CAP_V4L2);
-	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, 320);
-	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, 240);
-	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, 60);
+	videoCapture.open(params.cameraFile, cv::VideoCaptureAPIs::CAP_V4L2);
+	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, params.width);
+	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, params.height);
+	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, params.fps);
 	cv::Mat firstFrame;
 	videoCapture >> firstFrame;
 	if(firstFrame.empty())
 	{
 		throw(CameraError("Pusty obraz"));
 	}
+	
+	Logger::debug() << "Ustawienia kamery: " << params.cameraFile << " " << params.width << "×" << params.height << "p" << params.fps << " → " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS);
 }
 
 void Pipeline::runLoop()
@@ -37,17 +38,19 @@ void Pipeline::runLoop()
 	//FIXME
 	cv::Mat oneFrame;
 	videoCapture >> oneFrame;
-	Logger::debug() << "Złapano: " << oneFrame.total() << " B";
-// 	cv::Mat otherSpaceFrame;
-// 	cv::cvtColor(oneFrame, otherSpaceFrame, cv::COLOR_BGR2YUV_I420);
 	
-	cv::Mat displayFrame;
-	cv::cvtColor(oneFrame, displayFrame, cv::COLOR_BGR2YUV_I420);
+	cv::Mat displayFrame(oneFrame);
+	//zmień wielkość obrazu
+	if(displayFrame.rows != defines::viewHeight || displayFrame.cols != defines::viewWidth)
+	{
+		cv::resize(displayFrame, displayFrame, cv::Size(defines::viewWidth, defines::viewHeight));
+	}
+	assert(displayFrame.rows == defines::viewHeight);
+	assert(displayFrame.cols == defines::viewWidth);
 	
 	//synchronizuje dane
 	PipelineResult result;
 	result.view = displayFrame;
-	Logger::debug() << "Przekazano: " << result.view.total() << " B";
 	this->pipelineResult.store(result);
 }
 

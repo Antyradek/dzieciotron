@@ -1,22 +1,42 @@
 #include "locationer.hpp"
 #include <thread>
 #include <chrono>
+#include <cassert>
+#include <opencv2/imgproc.hpp>
 #include "logger.hpp"
 
 using namespace locationer;
 using namespace utils;
 
-Locationer::Locationer(pipeline::AtomicPipelineResult& centerResult):
+Locationer::Locationer(pipeline::AtomicPipelineResult& leftResult, pipeline::AtomicPipelineResult& centerResult, pipeline::AtomicPipelineResult& rightResult, pipeline::AtomicPipelineResult& viewResult):
+leftResult(leftResult),
 centerResult(centerResult),
-viewSender(defines::viewPipe){}
+rightResult(rightResult),
+viewResult(viewResult) {}
 
 void Locationer::runLoop()
 {
-	Logger::debug() << "Obliczanie lokacji...";
-	pipeline::PipelineResult result(this->centerResult.load());
+	pipeline::PipelineResult leftFrame(this->leftResult.load());
+	pipeline::PipelineResult centerFrame(this->centerResult.load());
+	pipeline::PipelineResult rightFrame(this->rightResult.load());
 	
-	viewSender.send(result.view);
+	if(leftFrame.view.empty() || centerFrame.view.empty() || rightFrame.view.empty())
+	{
+		//pewnie jeszcze nie zainicjalizowane
+		Logger::debug() << "Puste wejście: lewy=" << leftFrame.view.empty() << " centralny=" << centerFrame.view.empty() << " prawy=" << rightFrame.view.empty();
+		std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uintmax_t>(1000.0 / defines::idleFps)));
+		return;
+	}
 	
-	std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uintmax_t>(1000.0 / defines::viewFps)));
+	cv::Mat tripleFrame(leftFrame.view);
+	cv::hconcat(tripleFrame, centerFrame.view, tripleFrame);
+	cv::hconcat(tripleFrame, rightFrame.view, tripleFrame);
+	assert(tripleFrame.rows == defines::viewHeight);
+	assert(tripleFrame.cols == defines::viewWidth * 3);
+	pipeline::PipelineResult tripleResult;
+	tripleResult.view = tripleFrame;
+	this->viewResult.store(tripleResult);
+	
+	std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uintmax_t>(1000.0 / defines::locationerFps)));
 }
 

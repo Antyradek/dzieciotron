@@ -18,6 +18,7 @@
 #include "pipeline.hpp"
 #include "defines.hpp"
 #include "locationer.hpp"
+#include "view_sender.hpp"
 
 // static void setSize(cv::VideoCapture& videoCapture, int width, int height, int fps)
 // {
@@ -362,10 +363,21 @@ static void signalCallback(int signum)
 
 int main()
 {	
+	//TODO Użyć "v4l2-sysfs-path -d" do ogarnięcia które kamery są które albo zajrzeć do /dev
+	
+	pipeline::AtomicPipelineResult leftResult;
 	pipeline::AtomicPipelineResult centerResult;
-	pipeline::Pipeline centerPipeline(defines::centerCameraFile, centerResult);
-	locationer::Locationer locationer(centerResult);
-	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 2> tasks {{centerPipeline, locationer}};
+	pipeline::AtomicPipelineResult rightResult;
+	pipeline::AtomicPipelineResult viewResult;
+	
+	pipeline::Pipeline leftPipeline(defines::leftCameraParams, leftResult);
+	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult);
+	pipeline::Pipeline rightPipeline(defines::rightCameraParams, rightResult);
+	
+	locationer::Locationer locationer(leftResult, centerResult, rightResult, viewResult);
+	view::ViewSender viewSender(defines::viewPipe, viewResult);
+	
+	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 5> tasks {{centerPipeline, leftPipeline, rightPipeline, locationer, viewSender}};
 	
 	//obsługa sygnału
 	globals::exitCallback = [&tasks](){
@@ -376,6 +388,7 @@ int main()
 	};
 	signal(SIGINT, globals::signalCallback);
 	signal(SIGTERM, globals::signalCallback);
+	signal(SIGPIPE, SIG_IGN);
 	
 	//wystartuj
 	std::array<std::future<void>, tasks.size()> futures;

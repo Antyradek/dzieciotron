@@ -2,7 +2,6 @@
 #include <atomic>
 #include "pipeline_result.hpp"
 #include "task.hpp"
-#include "view_sender.hpp"
 
 /// Funkcje obliczania pozycji
 namespace locationer
@@ -13,14 +12,20 @@ class Locationer: public dzieciotron::AsyncTask
 {
 private:
 	/// Rezultat przetwarzania środkowej kamery
+	pipeline::AtomicPipelineResult& leftResult;
+	
+	/// Rezultat przetwarzania środkowej kamery
 	pipeline::AtomicPipelineResult& centerResult;
 	
-	/// Wysyłacz podglądu obrazu
-	view::ViewSender viewSender;
+	/// Rezultat przetwarzania środkowej kamery
+	pipeline::AtomicPipelineResult& rightResult;
+	
+	/// Rezultat do wysyłania podglądu obrazu
+	pipeline::AtomicPipelineResult& viewResult;
 	
 public:
 	/// Oblicza pozycję na podstawie rezultatów
-	Locationer(pipeline::AtomicPipelineResult& centerResult);
+	Locationer(pipeline::AtomicPipelineResult& leftResult, pipeline::AtomicPipelineResult& centerResult, pipeline::AtomicPipelineResult& rightResult, pipeline::AtomicPipelineResult& viewResult);
 	
 	/// Pusty destruktor
 	virtual ~Locationer(){}
