@@ -95,7 +95,11 @@ void ViewSender::runLoop()
 	const int writeRet = write(this->pipeHandle, image.data, image.total());
 	if(writeRet < 0 || (writeRet > 0 && static_cast<size_t>(writeRet) != image.total()))
 	{
-		throw(OutputError(std::string("Błąd zapisu do potoku: ") + strerror(errno)));
+		Logger::warning() << "Błąd zapisu do potoku: " << strerror(errno);
+		//zamykamy i otwieramy na nowo
+		close(this->pipeHandle);
+		this->pipeHandle = 0;
+		return;
 	}
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uintmax_t>(1000.0 / defines::viewFps)));
