@@ -77,7 +77,7 @@ void ViewSender::runLoop()
 	
 	//bierzemy obraz
 	pipeline::PipelineResult result(this->viewResult.load());
-	cv::Mat image(result.view);
+	cv::Mat& image(result.view);
 	if(image.empty())
 	{
 		//poczekamy trochę

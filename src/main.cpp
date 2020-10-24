@@ -9,7 +9,7 @@
 #include <array>
 #include <algorithm>
 
-// #include <opencv2/highgui.hpp>
+
 // 
 // #include <boost/program_options.hpp>
 // 
@@ -19,6 +19,11 @@
 #include "defines.hpp"
 #include "locationer.hpp"
 #include "view_sender.hpp"
+
+#ifdef GUI_DEBUG
+	#include "debug/dummy_pipeline.hpp"
+	#include "debug/view_shower.hpp"
+#endif
 
 // static void setSize(cv::VideoCapture& videoCapture, int width, int height, int fps)
 // {
@@ -315,22 +320,10 @@ using namespace utils;
 // 			}
 // 		}
 // 		
-// 		//wyświetl
-// 		cv::Mat displayFrame;
-// 		cv::hconcat(oneFrame, displayBinary, displayFrame);
-// 		cv::imshow(windowName, displayFrame);
-// 		
 // 		//zapisz
 // 		if(videoWriter.isOpened())
 // 		{
 // 			videoWriter.write(displayFrame);
-// 		}
-// 		
-// 		//steruje FPS
-// 		if(cv::waitKey(5) >= 0)
-// 		{
-// 			Logger::debug() << "Przerwanie z okna";
-// 			break;
 // 		}
 // 		
 // 		//oblicza FPS
@@ -370,12 +363,19 @@ int main()
 	pipeline::AtomicPipelineResult rightResult;
 	pipeline::AtomicPipelineResult viewResult;
 	
-	pipeline::Pipeline leftPipeline(defines::leftCameraParams, leftResult);
 	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult);
-	pipeline::Pipeline rightPipeline(defines::rightCameraParams, rightResult);
-	
 	locationer::Locationer locationer(leftResult, centerResult, rightResult, viewResult);
+	
+	//w debugu potoki dwóch pozostałych kamer są sztuczne
+#ifndef GUI_DEBUG
+	pipeline::Pipeline leftPipeline(defines::leftCameraParams, leftResult);
+	pipeline::Pipeline rightPipeline(defines::rightCameraParams, rightResult);
 	view::ViewSender viewSender(defines::viewPipe, viewResult);
+#else
+	debug::DummyPipeline leftPipeline(leftResult);
+	debug::DummyPipeline rightPipeline(rightResult);
+	debug::ViewShower viewSender(viewResult);
+#endif
 	
 	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 5> tasks {{centerPipeline, leftPipeline, rightPipeline, locationer, viewSender}};
 	

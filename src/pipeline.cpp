@@ -35,7 +35,6 @@ videoCapture()
 
 void Pipeline::runLoop()
 {
-	//FIXME
 	cv::Mat oneFrame;
 	videoCapture >> oneFrame;
 	
