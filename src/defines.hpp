@@ -11,15 +11,15 @@ namespace defines
 		std::string cameraFile;
 		
 		/// Szerokość obrazu
-		uintmax_t width;
+		unsigned int width;
 		
 		/// Wysokość obrazu
-		uintmax_t height;
+		unsigned int height;
 		
 		/// Liczba klatek na sekundę
-		uintmax_t fps;
+		unsigned int fps;
 		
-		CameraCaptureParams(const std::string& cameraFile, uintmax_t width, uintmax_t height, uintmax_t fps):
+		CameraCaptureParams(const std::string& cameraFile, unsigned int width, unsigned int height, unsigned int fps):
 		cameraFile(cameraFile),
 		width(width),
 		height(height),
@@ -35,11 +35,26 @@ namespace defines
 	/// Parametry prawej kamery
 	const CameraCaptureParams rightCameraParams("/dev/video3", 1280, 720, 30);
 	
+	/// Wielkość jądra wygładzania
+	const unsigned int smoothKernelSize = 5;
+	
+	/// Próg jasności wyznaczania znaczników
+	const double luminanceThreshold = 0.96;
+	
+	/// Wielkość jądra dla otwarcia i zamknięcia
+	const unsigned int openCloseKernelSize = 3;
+	
+	/// Maksymalna ilość iteracji klastrowania
+	const unsigned int clusteringMaxIterations = 10;
+	
+	/// Minimalna różnica pozycji przy klastrowaniu
+	const double clusteringMinEpsilon = 1.0;
+	
 	/// Szerokość podglądu kamery
-	const uintmax_t viewWidth = 320;
+	const unsigned int viewWidth = 320;
 	
 	/// Wysokość podglądu kamery
-	const uintmax_t viewHeight = 240;
+	const unsigned int viewHeight = 240;
 	
 	/// Ilość klatek na sekundę podglądu
 	const double viewFps = 10;
