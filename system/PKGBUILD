@@ -1,0 +1,35 @@
+pkgname=dzieciotron
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Projekt dzieciotron i zależności"
+arch=('aarch64')
+license=('gpl')
+depends=()
+makedepends=()
+source=('dzieciotron.sysusers' 'dzieciotron.service' 'dzieciotron.tmpfiles' 'dzieciotron-sender' 'dzieciotron-sender.service')
+md5sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+build()
+{
+	mkdir -p $srcdir/systemfiles
+	mv dzieciotron.sysusers $srcdir/systemfiles
+	mv dzieciotron.tmpfiles $srcdir/systemfiles
+	mv dzieciotron.service $srcdir/systemfiles
+	mv dzieciotron-sender $srcdir/systemfiles
+	mv dzieciotron-sender.service $srcdir/systemfiles
+}
+
+package()
+{
+	install -d -m 755 $pkgdir/opt/dzieciotron
+	# Użytkownicy
+	install -D -m 644 $srcdir/systemfiles/dzieciotron.sysusers $pkgdir/usr/lib/sysusers.d/dzieciotron.conf
+	# Pliki i pozwolenia
+	install -D -m 644 $srcdir/systemfiles/dzieciotron.tmpfiles $pkgdir/usr/lib/tmpfiles.d/dzieciotron.conf
+	# Usługa dæmonizowania
+	install -D -m 644 $srcdir/systemfiles/dzieciotron.service $pkgdir/usr/lib/systemd/system/dzieciotron.service
+	# Klient wysyłający podgląd
+	install -D -m 755 $srcdir/systemfiles/dzieciotron-sender $pkgdir/usr/bin/dzieciotron-sender
+	# Dæmonizowanie klienta podglądu
+	install -D -m 644 $srcdir/systemfiles/dzieciotron-sender.service $pkgdir/usr/lib/systemd/system/dzieciotron-sender.service
+}

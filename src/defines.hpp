@@ -19,21 +19,25 @@ namespace defines
 		/// Liczba klatek na sekundę
 		unsigned int fps;
 		
-		CameraCaptureParams(const std::string& cameraFile, unsigned int width, unsigned int height, unsigned int fps):
+		/// Pin wyjścia GPIO do oświetlenia
+		unsigned int gpioPin;
+		
+		CameraCaptureParams(const std::string& cameraFile, unsigned int width, unsigned int height, unsigned int fps, unsigned int gpioPin):
 		cameraFile(cameraFile),
 		width(width),
 		height(height),
-		fps(fps) {}
+		fps(fps),
+		gpioPin(gpioPin) {}
 	};
 	
 	/// Parametry centralnej kamery
-	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60);
+	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 7);
 	
 	/// Parametry lewej kamery
-	const CameraCaptureParams leftCameraParams("/dev/video1", 1280, 720, 30);
+	const CameraCaptureParams leftCameraParams("/dev/video1", 1280, 720, 30, 15);
 	
 	/// Parametry prawej kamery
-	const CameraCaptureParams rightCameraParams("/dev/video3", 1280, 720, 30);
+	const CameraCaptureParams rightCameraParams("/dev/video3", 1280, 720, 30, 21);
 	
 	/// Wielkość jądra wygładzania
 	const unsigned int smoothKernelSize = 5;
@@ -66,6 +70,6 @@ namespace defines
 	const double locationerFps = 60;
 	
 	/// Potok do którego zapisujemy podgląd
-	const std::string viewPipe = "/tmp/dzieciotron.fifo";
+	const std::string viewPipe = "/run/dzieciotron.fifo";
 	
 }

@@ -1,0 +1,21 @@
+# Ustawia pliki i pozwolenia dla Dzieciotrona
+# Idzie w kolejności chyba jak podano w liście w "man tmpfiles.d", ważne aby zmieniać pozwolenia po włączeniu GPIO
+
+# Katalog domowy
+d /opt/dzieciotron 0755 dzieciotron dzieciotron
+
+# Włączenie GPIO
+w+ /sys/class/gpio/export - - - - 7
+w+ /sys/class/gpio/export - - - - 15
+w+ /sys/class/gpio/export - - - - 21
+
+# Ustawienie GPIO
+w /sys/class/gpio/gpio7/direction - - - - out
+z /sys/class/gpio/gpio7/value 644 dzieciotron dzieciotron
+w /sys/class/gpio/gpio15/direction - - - - out
+z /sys/class/gpio/gpio15/value 644 dzieciotron dzieciotron
+w /sys/class/gpio/gpio21/direction - - - - out
+z /sys/class/gpio/gpio21/value 644 dzieciotron dzieciotron
+
+# Kolejka FIFO
+p /run/dzieciotron.fifo 644 dzieciotron dzieciotron

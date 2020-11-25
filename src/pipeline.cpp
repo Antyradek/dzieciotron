@@ -30,6 +30,8 @@ videoCapture()
 		throw(CameraError("Pusty obraz"));
 	}
 	
+	//GPIO
+	
 	Logger::debug() << "Ustawienia kamery: " << params.cameraFile << " " << params.width << "×" << params.height << "p" << params.fps << " → " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS);
 }
 
@@ -40,9 +42,10 @@ void Pipeline::runLoop()
 	cv::Mat smoothFrame(oneFrame);
 	
 	//filtr medianowy
-	//TODO to jest strasznie ciężkie, może dało by się bez albo sprzętowo
+	//TODO to jest strasznie ciężkie, może dało by się bez albo sprzętowo NEONem
 	static_assert(defines::smoothKernelSize % 2 == 1);
 // 	cv::medianBlur(oneFrame, smoothFrame, defines::smoothKernelSize);
+	//FIXME na razie zwykłe rozmycie
 	cv::blur(oneFrame, smoothFrame, cv::Size(5, 5));
 	cv::Mat displayFrame(smoothFrame);
 	const unsigned int markersWidth = displayFrame.cols / 150;

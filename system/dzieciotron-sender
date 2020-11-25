@@ -1,0 +1,19 @@
+#! /bin/sh
+# Uruchamia klienta FFMPEG na urządzeniu, które wysyła nam dane na serwer
+
+trap exit SIGINT
+trap exit SIGTERM
+
+DZIECIOTRON_PIPE=/run/dzieciotron.fifo
+OUTPUT="rtmp://arch.lan:9000/abaddon"
+OUTPUT=${1-$OUTPUT}
+CODEC=h264_v4l2m2m
+CODEC=${2-$CODEC}
+WIDTH=$((3 * 320))
+HEIGHT=240
+while true
+do
+	echo "Wyjście do $OUTPUT"
+	ffmpeg -f rawvideo -framerate 10 -video_size ${WIDTH}x${HEIGHT} -i $DZIECIOTRON_PIPE -f flv -an -c:v $CODEC -q:v 10 "$OUTPUT"
+	sleep 3
+done

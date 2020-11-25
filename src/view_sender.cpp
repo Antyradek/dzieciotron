@@ -19,15 +19,11 @@ pipeName(pipeName),
 pipeHandle(0),
 viewResult(viewResult)
 {
-	//tworzenie nowej rury
-	const int pipeRet = mkfifo(this->pipeName.c_str(), S_IRUSR | S_IWUSR);
-	if(pipeRet < 0 && errno == EEXIST)
+	//otwarcie nowej rury, powinna być stworzona wcześniej przez system
+	this->pipeHandle = open(this->pipeName.c_str(), O_WRONLY);
+	if(this->pipeHandle < 0)
 	{
-		Logger::warning() << "Plik potoku " << this->pipeName << " istnieje";
-	}
-	else if(pipeRet != 0)
-	{
-		throw(OutputError("Błąd tworzenia potoku " + this->pipeName + ": " + strerror(errno)));
+		throw(OutputError("Błąd otwierania potoku " + this->pipeName + ": " + strerror(errno)));
 	}
 }
 

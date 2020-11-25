@@ -1,0 +1,15 @@
+# Moduł Systemd do uruchamiania klienta podglądu Dzieciotrona w tle
+# Klient jest niezależny od Dzieciotrona, ale nie będzie nic robił jeśli tamten nie jest włączony i vice versa
+
+[Unit]
+Description=Klient podglądu Dzieciotrona
+
+[Service]
+Type=simple
+User=dzieciotron
+ExecStart=/usr/bin/dzieciotron-sender
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+ 

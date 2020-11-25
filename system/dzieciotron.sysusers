@@ -1,0 +1,7 @@
+# Ustawia grupy i użytkowników dla Dzieciotrona przez Systemd
+
+# Użytkownik dla programu
+u dzieciotron - "Dæmon Dzieciotron" /opt/dzieciotron /bin/sh
+
+# Umieszczamy w grupie aby mógł czytać z kamerek
+m dzieciotron video

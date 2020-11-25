@@ -1,0 +1,14 @@
+# Moduł Systemd do uruchamiania Dzieciotrona w tle
+
+[Unit]
+Description=Dæmon Dzieciotron
+
+[Service]
+Type=simple
+User=dzieciotron
+ExecStart=/usr/bin/dzieciotron
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+ 
