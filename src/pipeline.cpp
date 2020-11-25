@@ -15,10 +15,11 @@ Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineRes
 dzieciotron::AsyncTask(),
 params(params),
 pipelineResult(pipelineResult),
-videoCapture()
+videoCapture(),
+gpioOutput()
 {
+	//otwarcie wideo
 	this->videoCapture.setExceptionMode(true);
-	
 	videoCapture.open(params.cameraFile, cv::VideoCaptureAPIs::CAP_V4L2);
 	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, params.width);
 	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, params.height);
@@ -31,12 +32,23 @@ videoCapture()
 	}
 	
 	//GPIO
+	gpioOutput.exceptions(std::ofstream::badbit | std::ofstream::failbit);
+	gpioOutput.open(defines::gpioControlFile(params.gpioPin), std::ofstream::out);
 	
-	Logger::debug() << "Ustawienia kamery: " << params.cameraFile << " " << params.width << "×" << params.height << "p" << params.fps << " → " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS);
+	//wypisanie
+	Logger::debug() << "Ustawienia kamery: " << params.cameraFile << " " << params.width << "×" << params.height << "p" << params.fps << " → " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << params.gpioPin;
+}
+
+void Pipeline::setDiode(bool on)
+{
+	this->gpioOutput << (on ? "1" : "0") << std::endl;
 }
 
 void Pipeline::runLoop()
 {
+	//FIXME debugowo diody
+	this->setDiode((rand() % 100 < 50));
+	
 	cv::Mat oneFrame;
 	videoCapture >> oneFrame;
 	cv::Mat smoothFrame(oneFrame);

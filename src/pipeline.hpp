@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <atomic>
+#include <fstream>
 #include <opencv2/videoio.hpp>
 #include "pipeline_result.hpp"
 #include "task.hpp"
@@ -21,8 +22,14 @@ private:
 	/// Miejsce gdzie wsadzamy rezultat
 	AtomicPipelineResult& pipelineResult;
 	
-	//główne połączenie z kamerą lub plikiem wideo
+	/// Główne połączenie z kamerą lub plikiem wideo
 	cv::VideoCapture videoCapture;
+	
+	/// Wyjście sterowania GPIO
+	std::ofstream gpioOutput;
+	
+	/// Włącza i wyłącza światło diody
+	void setDiode(bool on);
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
