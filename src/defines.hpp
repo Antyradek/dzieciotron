@@ -22,22 +22,26 @@ namespace defines
 		/// Pin wyjścia GPIO do oświetlenia
 		unsigned int gpioPin;
 		
-		CameraCaptureParams(const std::string& cameraFile, unsigned int width, unsigned int height, unsigned int fps, unsigned int gpioPin):
+		/// Czy obrócić wyjście z kamery
+		bool inverted;
+		
+		CameraCaptureParams(const std::string& cameraFile, unsigned int width, unsigned int height, unsigned int fps, unsigned int gpioPin, bool inverted):
 		cameraFile(cameraFile),
 		width(width),
 		height(height),
 		fps(fps),
-		gpioPin(gpioPin) {}
+		gpioPin(gpioPin), 
+		inverted(inverted){}
 	};
 	
 	/// Parametry centralnej kamery
-	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 7);
+	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 7, false);
 	
 	/// Parametry lewej kamery
-	const CameraCaptureParams leftCameraParams("/dev/video1", 1280, 720, 30, 15);
+	const CameraCaptureParams leftCameraParams("/dev/video3", 1280, 720, 30, 15, false);
 	
 	/// Parametry prawej kamery
-	const CameraCaptureParams rightCameraParams("/dev/video3", 1280, 720, 30, 21);
+	const CameraCaptureParams rightCameraParams("/dev/video1", 1280, 720, 30, 21, true);
 	
 	/// Wielkość jądra wygładzania
 	const unsigned int smoothKernelSize = 5;

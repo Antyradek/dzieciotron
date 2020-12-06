@@ -20,28 +20,41 @@ gpioOutput()
 {
 	//otwarcie wideo
 	this->videoCapture.setExceptionMode(true);
-	videoCapture.open(params.cameraFile, cv::VideoCaptureAPIs::CAP_V4L2);
-	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, params.width);
-	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, params.height);
-	videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, params.fps);
+	this->videoCapture.open(this->params.cameraFile, cv::VideoCaptureAPIs::CAP_V4L2);
+	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, this->params.width);
+	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, this->params.height);
+	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, this->params.fps);
 	cv::Mat firstFrame;
-	videoCapture >> firstFrame;
+	this->videoCapture >> firstFrame;
 	if(firstFrame.empty())
 	{
 		throw(CameraError("Pusty obraz"));
 	}
 	
 	//GPIO
-	gpioOutput.exceptions(std::ofstream::badbit | std::ofstream::failbit);
-	gpioOutput.open(defines::gpioControlFile(params.gpioPin), std::ofstream::out);
+	this->gpioOutput.exceptions(std::ofstream::badbit | std::ofstream::failbit);
+	try
+	{
+#ifndef GUI_DEBUG
+		this->gpioOutput.open(defines::gpioControlFile(this->params.gpioPin), std::ofstream::out);
+#endif
+	}
+	catch(const std::ofstream::failure& err)
+	{
+		throw(CameraError("Błąd ustawiania wyjść GPIO"));
+	}
 	
 	//wypisanie
-	Logger::debug() << "Ustawienia kamery: " << params.cameraFile << " " << params.width << "×" << params.height << "p" << params.fps << " → " << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << params.gpioPin;
+	Logger::debug() << "Ustawienia kamery: " << this->params.cameraFile << " " << this->params.width << "×" << this->params.height << "p" << this->params.fps << " → " << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << this->params.gpioPin;
 }
 
 void Pipeline::setDiode(bool on)
 {
+#ifndef GUI_DEBUG
 	this->gpioOutput << (on ? "1" : "0") << std::endl;
+#else
+	(void) on;
+#endif
 }
 
 void Pipeline::runLoop()
@@ -51,6 +64,13 @@ void Pipeline::runLoop()
 	
 	cv::Mat oneFrame;
 	videoCapture >> oneFrame;
+	
+	//obróć obraz o 180°
+	if(params.inverted)
+	{
+		cv::rotate(oneFrame, oneFrame, cv::RotateFlags::ROTATE_180);
+	}
+	
 	cv::Mat smoothFrame(oneFrame);
 	
 	//filtr medianowy
