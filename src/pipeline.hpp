@@ -40,6 +40,9 @@ private:
 	/// Zwraca kopię aktualnego tła (konstruktor kopiujący robi tylko płytką kopię)
 	cv::Mat getBackground();
 	
+	/// Zwraca następną klatkę
+	cv::Mat getFrame();
+	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
 	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult);

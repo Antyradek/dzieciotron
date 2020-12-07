@@ -92,7 +92,7 @@ void Pipeline::updateBackground()
 	wasteFunction();
 	
 	//złap klatkę
-	this->videoCapture >> this->background;
+	this->background = this->getFrame();
 	
 	//zapal diodę
 	this->setDiode(true);
@@ -105,19 +105,29 @@ cv::Mat Pipeline::getBackground()
 	return(this->background.clone());
 }
 
-void Pipeline::runLoop()
-{	
+cv::Mat Pipeline::getFrame()
+{
 	cv::Mat oneFrame;
 	this->videoCapture >> oneFrame;
-	
-	//odejmij tło od obrazu
-	oneFrame = oneFrame - this->getBackground();
-	
 	//obróć obraz o 180°
 	if(this->params.inverted)
 	{
 		cv::rotate(oneFrame, oneFrame, cv::RotateFlags::ROTATE_180);
 	}
+	return(oneFrame);
+}
+
+void Pipeline::runLoop()
+{	
+	cv::Mat oneFrame = this->getFrame();
+	
+	//klatka do podglądu
+	cv::Mat displayFrame = oneFrame.clone();
+	const unsigned int markersWidth = displayFrame.cols / 150;
+	const unsigned int markersSize = displayFrame.cols / 40;
+	
+	//odejmij tło od obrazu
+	oneFrame = oneFrame - this->getBackground();
 	
 	//filtr medianowy
 	//TODO to jest strasznie ciężkie, może dało by się bez albo sprzętowo NEONem
@@ -125,9 +135,6 @@ void Pipeline::runLoop()
 // 	cv::medianBlur(oneFrame, smoothFrame, defines::smoothKernelSize);
 	//FIXME na razie zwykłe rozmycie
 	cv::blur(oneFrame, oneFrame, cv::Size(5, 5));
-	cv::Mat displayFrame = oneFrame.clone();
-	const unsigned int markersWidth = displayFrame.cols / 150;
-	const unsigned int markersSize = displayFrame.cols / 40;
 	
 	//przerób na inną przestrzeń
 	cv::Mat hslSpaceFrame;
@@ -140,7 +147,7 @@ void Pipeline::runLoop()
 	
 	//progowanie
 	cv::Mat binaryFrame;
-	cv::threshold(luminanceFrame, binaryFrame, defines::luminanceThreshold * 255, 255, cv::ThresholdTypes::THRESH_BINARY);
+	cv::threshold(luminanceFrame, binaryFrame, this->params.luminanceThreshold * 255, 255, cv::ThresholdTypes::THRESH_BINARY);
 	
 	//zamknięcie i otwarcie
 	cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_CLOSE, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(defines::openCloseKernelSize, defines::openCloseKernelSize)));

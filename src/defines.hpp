@@ -25,32 +25,33 @@ namespace defines
 		/// Czy obrócić wyjście z kamery
 		bool inverted;
 		
-		CameraCaptureParams(const std::string& cameraFile, unsigned int width, unsigned int height, unsigned int fps, unsigned int gpioPin, bool inverted):
+		/// Próg jasności wyznaczania znaczników
+		double luminanceThreshold;
+		
+		CameraCaptureParams(const std::string& cameraFile, unsigned int width, unsigned int height, unsigned int fps, unsigned int gpioPin, bool inverted, double threshold):
 		cameraFile(cameraFile),
 		width(width),
 		height(height),
 		fps(fps),
 		gpioPin(gpioPin), 
-		inverted(inverted){}
+		inverted(inverted),
+		luminanceThreshold(threshold){}
 	};
 	
 	/// Parametry centralnej kamery
-	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 15, false);
+	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 15, false, 0.3);
 	
 	/// Parametry lewej kamery
-	const CameraCaptureParams leftCameraParams("/dev/video3", 1280, 720, 30, 7, false);
+	const CameraCaptureParams leftCameraParams("/dev/video3", 1280, 720, 30, 7, false, 0.5);
 	
 	/// Parametry prawej kamery
-	const CameraCaptureParams rightCameraParams("/dev/video1", 1280, 720, 30, 21, true);
+	const CameraCaptureParams rightCameraParams("/dev/video1", 1280, 720, 30, 21, true, 0.5);
 	
 	/// Czas przełączenia diody
 	const std::chrono::milliseconds diodeToggleTime(100);
 	
 	/// Wielkość jądra wygładzania
 	const unsigned int smoothKernelSize = 5;
-	
-	/// Próg jasności wyznaczania znaczników
-	const double luminanceThreshold = 0.96;
 	
 	/// Wielkość jądra dla otwarcia i zamknięcia
 	const unsigned int openCloseKernelSize = 3;
