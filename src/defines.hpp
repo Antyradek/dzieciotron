@@ -35,13 +35,16 @@ namespace defines
 	};
 	
 	/// Parametry centralnej kamery
-	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 7, false);
+	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 15, false);
 	
 	/// Parametry lewej kamery
-	const CameraCaptureParams leftCameraParams("/dev/video3", 1280, 720, 30, 15, false);
+	const CameraCaptureParams leftCameraParams("/dev/video3", 1280, 720, 30, 7, false);
 	
 	/// Parametry prawej kamery
 	const CameraCaptureParams rightCameraParams("/dev/video1", 1280, 720, 30, 21, true);
+	
+	/// Czas przełączenia diody
+	const std::chrono::milliseconds diodeToggleTime(100);
 	
 	/// Wielkość jądra wygładzania
 	const unsigned int smoothKernelSize = 5;

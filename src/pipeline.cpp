@@ -2,6 +2,7 @@
 #include <cassert>
 #include <thread>
 #include <chrono>
+#include <future>
 #include <opencv2/imgproc.hpp>
 #include "logger.hpp"
 #include "exceptions.hpp"
@@ -16,7 +17,8 @@ dzieciotron::AsyncTask(),
 params(params),
 pipelineResult(pipelineResult),
 videoCapture(),
-gpioOutput()
+gpioOutput(),
+background()
 {
 	//otwarcie wideo
 	this->videoCapture.setExceptionMode(true);
@@ -24,6 +26,7 @@ gpioOutput()
 	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, this->params.width);
 	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, this->params.height);
 	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, this->params.fps);
+	//pierwsza klatka
 	cv::Mat firstFrame;
 	this->videoCapture >> firstFrame;
 	if(firstFrame.empty())
@@ -44,6 +47,9 @@ gpioOutput()
 		throw(CameraError("Błąd ustawiania wyjść GPIO"));
 	}
 	
+	//zaktualizuj tło
+	this->updateBackground();
+	
 	//wypisanie
 	Logger::debug() << "Ustawienia kamery: " << this->params.cameraFile << " " << this->params.width << "×" << this->params.height << "p" << this->params.fps << " → " << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << this->params.gpioPin;
 }
@@ -57,35 +63,75 @@ void Pipeline::setDiode(bool on)
 #endif
 }
 
-void Pipeline::runLoop()
+void Pipeline::updateBackground()
 {
-	//FIXME debugowo diody
-	this->setDiode((rand() % 100 < 50));
+	//potrzeba jest aktywnie czytać klatki aby nie buforować ich
+	//można to zrobić na osobnym wątku, żeby nie wsadzać kodu do głównej pętli
 	
+	//marnotrawi ramki przez określony czas
+	auto wasteFunction = [this](){
+		std::atomic_bool wastesFrames = true;
+		
+		//uruchom marnotrawstwo klatek
+		auto wasteFuture = std::async([this, &wastesFrames](){
+			while(wastesFrames)
+			{
+				this->videoCapture.grab();
+			}
+		});
+		//poczekaj na zmianę diody
+		std::this_thread::sleep_for(defines::diodeToggleTime);
+		//zatrzymaj marnowanie
+		wastesFrames = false;
+		wasteFuture.wait();
+	};
+	
+	//zgaś diodę
+	this->setDiode(false);
+	//zmarnuj klatki
+	wasteFunction();
+	
+	//złap klatkę
+	this->videoCapture >> this->background;
+	
+	//zapal diodę
+	this->setDiode(true);
+	//i ponownie
+	wasteFunction();
+}
+
+cv::Mat Pipeline::getBackground()
+{
+	return(this->background.clone());
+}
+
+void Pipeline::runLoop()
+{	
 	cv::Mat oneFrame;
-	videoCapture >> oneFrame;
+	this->videoCapture >> oneFrame;
+	
+	//odejmij tło od obrazu
+	oneFrame = oneFrame - this->getBackground();
 	
 	//obróć obraz o 180°
-	if(params.inverted)
+	if(this->params.inverted)
 	{
 		cv::rotate(oneFrame, oneFrame, cv::RotateFlags::ROTATE_180);
 	}
-	
-	cv::Mat smoothFrame(oneFrame);
 	
 	//filtr medianowy
 	//TODO to jest strasznie ciężkie, może dało by się bez albo sprzętowo NEONem
 	static_assert(defines::smoothKernelSize % 2 == 1);
 // 	cv::medianBlur(oneFrame, smoothFrame, defines::smoothKernelSize);
 	//FIXME na razie zwykłe rozmycie
-	cv::blur(oneFrame, smoothFrame, cv::Size(5, 5));
-	cv::Mat displayFrame(smoothFrame);
+	cv::blur(oneFrame, oneFrame, cv::Size(5, 5));
+	cv::Mat displayFrame = oneFrame.clone();
 	const unsigned int markersWidth = displayFrame.cols / 150;
 	const unsigned int markersSize = displayFrame.cols / 40;
 	
 	//przerób na inną przestrzeń
 	cv::Mat hslSpaceFrame;
-	cv::cvtColor(smoothFrame, hslSpaceFrame, cv::COLOR_BGR2HLS_FULL);
+	cv::cvtColor(oneFrame, hslSpaceFrame, cv::COLOR_BGR2HLS_FULL);
 	
 	//podziel na składowe
 	cv::Mat channels[hslSpaceFrame.channels()];
@@ -106,7 +152,7 @@ void Pipeline::runLoop()
 	std::vector<std::vector<cv::Point>> contours;
 	//NOTE zbiór ustalający kolejność konturów, każdy wektor zawiera 4 elementy oznaczające indeksy: kolejny, poprzedni, rodzica i dziecko
 	std::vector<cv::Vec4i> hierarchy;
-	//TODO dokładniejszy sposób obliczeń dla obwarzanków
+	//TODO dokładniejszy sposób obliczeń dla obwarzanków, które mają dodatkowe kontury wewnątrz
 	//NOTE druga część to aproksymacja czy trzymać wszystkie piksele czy tylko otoczkę
 	cv::findContours(binaryFrame, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 	

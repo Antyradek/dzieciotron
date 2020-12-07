@@ -28,8 +28,17 @@ private:
 	/// Wyjście sterowania GPIO
 	std::ofstream gpioOutput;
 	
+	/// Tło do odejmowania 
+	cv::Mat background;
+	
 	/// Włącza i wyłącza światło diody
 	void setDiode(bool on);
+	
+	/// Operacja aktualizacji tła
+	void updateBackground();
+	
+	/// Zwraca kopię aktualnego tła (konstruktor kopiujący robi tylko płytką kopię)
+	cv::Mat getBackground();
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
