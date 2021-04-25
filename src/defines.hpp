@@ -80,6 +80,9 @@ namespace defines
 	/// Potok do którego zapisujemy podgląd
 	const std::string viewPipe = "/run/dzieciotron.fifo";
 	
+	/// Długość historii detektywów do wyświetlania
+	const unsigned int detectiveHistoryLength = 3;
+	
 	/// Funkcja do tworzenia nazwy pliku do sterowania GPIO (ponieważ numer jest w środku ścieżki)
 	const std::function<std::string(unsigned int)> gpioControlFile = [](unsigned int gpio){return("/sys/class/gpio/gpio" + std::to_string(gpio) + "/value");};
 	

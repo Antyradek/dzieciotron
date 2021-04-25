@@ -2,6 +2,7 @@
 #include <string>
 #include <atomic>
 #include <fstream>
+#include <list>
 #include <opencv2/videoio.hpp>
 #include "pipeline_result.hpp"
 #include "task.hpp"
@@ -34,6 +35,9 @@ private:
 	/// Śledzone pozycje tych samych klastrów w przestrzeni pikselowej
 	std::array<cv::Point2f, 4> detectives;
 	
+	/// Historia kolejnych pozycji detektywów
+	std::list<std::array<cv::Point2f, 4>> detectiveHistory;
+	
 	/// Włącza i wyłącza światło diody
 	void setDiode(bool on);
 	
@@ -51,6 +55,9 @@ private:
 	
 	/// Znajduje środki klastrów w podanym obrazie binarnym
 	std::vector<cv::Point2f> findClusters(const cv::Mat& binaryFrame, std::vector<std::vector<cv::Point>>& contours) const;
+	
+	/// Śledzi klastry przez detektywów
+	void trackDetectives(const std::vector<cv::Point2f>& clusters);
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym

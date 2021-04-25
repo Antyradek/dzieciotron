@@ -19,7 +19,8 @@ pipelineResult(pipelineResult),
 videoCapture(),
 gpioOutput(),
 background(),
-detectives{{{0, 0}, {0, static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), 0}}}
+detectives{{{0, 0}, {0, static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), 0}}},
+detectiveHistory()
 {
 	//otwarcie wideo
 	this->videoCapture.setExceptionMode(true);
@@ -175,6 +176,50 @@ std::vector<cv::Point2f> Pipeline::findClusters(const cv::Mat& binaryFrame, std:
 	return(clusterCenters);
 }
 
+void pipeline::Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
+{
+	//odległości detektyw i klaster
+	std::vector<std::tuple<double, std::reference_wrapper<const cv::Point2f>, std::reference_wrapper<const cv::Point2f>>> distances;
+	
+	//umieść odległości
+	for(const cv::Point2f& detective : this->detectives)
+	{
+		for(const cv::Point2f& cluster : clusters)
+		{
+			const double distance = cv::norm(detective - cluster);
+			distances.emplace_back(distance, std::cref(detective), std::cref(cluster));
+		}
+	}
+	
+	//posortuj
+	std::sort(distances.begin(), distances.end(), [](auto& a, auto& b){
+		return(std::get<0>(a) < std::get<0>(b));
+	});
+	
+	//weź kolejne najkrótsze
+	//jeśli klastrów jest mniej, to niektórzy detektywni zostaną nieruszeni
+	while(not distances.empty())
+	{
+		auto [distance, detective, cluster] = distances.front();
+		//ustaw detektywa w nowym miejscu
+		*std::find(this->detectives.begin(), this->detectives.end(), detective.get()) = cluster;
+		
+		//usuń wszystkie z listy
+		distances.erase(std::remove_if(distances.begin(), distances.end(), [&detective, &cluster](auto& v){
+			return(std::get<1>(v).get() == detective.get() or std::get<2>(v).get() == cluster.get());
+		}), distances.end());
+	}
+	
+	//umieść pozycje detektywów w historii
+	this->detectiveHistory.emplace_front(this->detectives);
+	
+	//usuń najstarszego detektywa
+	if(this->detectiveHistory.size() > defines::detectiveHistoryLength)
+	{
+		this->detectiveHistory.pop_back();
+	}
+}
+
 void Pipeline::runLoop()
 {	
 	cv::Mat oneFrame = this->getFrame();
@@ -216,10 +261,25 @@ void Pipeline::runLoop()
 		cv::circle(displayFrame, point, 2 * markersSize, cv::Scalar(255, 255, 255), markersWidth);
 	}
 	
-	//narysuj detektywów
-	for(const cv::Point2f& point : this->detectives)
+	//szukaj detektywów
+	this->trackDetectives(clusters);
+	
+	//narysuj historię detektywów
+	std::reference_wrapper<const typeof(this->detectives)> lastDetective = this->detectives;
+	for(const auto& detectives : this->detectiveHistory)
 	{
-		cv::circle(displayFrame, point, markersSize, cv::Scalar(127, 127, 255), markersWidth);
+		for(size_t i = 0; i < detectives.size(); i++)
+		{
+			cv::line(displayFrame, lastDetective.get().at(i), detectives.at(i), cv::Scalar(127, 127, 255), markersWidth);
+		}
+		
+		lastDetective = detectives;
+	}
+	
+	//narysuj detektywów
+	for(size_t i = 0; i < this->detectives.size(); i++)
+	{
+		cv::circle(displayFrame, this->detectives.at(i), markersSize, cv::Scalar(127, 255.0 * i / this->detectives.size(), 255), markersWidth);
 	}
 	
 	//zmień wielkość obrazu do podglądu
