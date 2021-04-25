@@ -31,6 +31,9 @@ private:
 	/// Tło do odejmowania 
 	cv::Mat background;
 	
+	/// Śledzone pozycje tych samych klastrów w przestrzeni pikselowej
+	std::array<cv::Point2f, 4> detectives;
+	
 	/// Włącza i wyłącza światło diody
 	void setDiode(bool on);
 	
@@ -42,6 +45,12 @@ private:
 	
 	/// Zwraca następną klatkę
 	cv::Mat getFrame();
+	
+	/// Proguje luminancję klatki, zwraca binarny obraz
+	cv::Mat thresholdLuminance(const cv::Mat& baseFrame) const;
+	
+	/// Znajduje środki klastrów w podanym obrazie binarnym
+	std::vector<cv::Point2f> findClusters(const cv::Mat& binaryFrame, std::vector<std::vector<cv::Point>>& contours) const;
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym

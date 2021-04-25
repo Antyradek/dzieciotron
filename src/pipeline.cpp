@@ -18,7 +18,8 @@ params(params),
 pipelineResult(pipelineResult),
 videoCapture(),
 gpioOutput(),
-background()
+background(),
+detectives{{{0, 0}, {0, static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), 0}}}
 {
 	//otwarcie wideo
 	this->videoCapture.setExceptionMode(true);
@@ -117,28 +118,11 @@ cv::Mat Pipeline::getFrame()
 	return(oneFrame);
 }
 
-void Pipeline::runLoop()
-{	
-	cv::Mat oneFrame = this->getFrame();
-	
-	//klatka do podglądu
-	cv::Mat displayFrame = oneFrame.clone();
-	const unsigned int markersWidth = displayFrame.cols / 150;
-	const unsigned int markersSize = displayFrame.cols / 40;
-	
-	//odejmij tło od obrazu
-	oneFrame = oneFrame - this->getBackground();
-	
-	//filtr medianowy
-	//TODO to jest strasznie ciężkie, może dało by się bez albo sprzętowo NEONem
-	static_assert(defines::smoothKernelSize % 2 == 1);
-// 	cv::medianBlur(oneFrame, smoothFrame, defines::smoothKernelSize);
-	//FIXME na razie zwykłe rozmycie
-	cv::blur(oneFrame, oneFrame, cv::Size(5, 5));
-	
+cv::Mat Pipeline::thresholdLuminance(const cv::Mat& baseFrame) const
+{
 	//przerób na inną przestrzeń
 	cv::Mat hslSpaceFrame;
-	cv::cvtColor(oneFrame, hslSpaceFrame, cv::COLOR_BGR2HLS_FULL);
+	cv::cvtColor(baseFrame, hslSpaceFrame, cv::COLOR_BGR2HLS_FULL);
 	
 	//podziel na składowe
 	cv::Mat channels[hslSpaceFrame.channels()];
@@ -153,14 +137,18 @@ void Pipeline::runLoop()
 	cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_CLOSE, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(defines::openCloseKernelSize, defines::openCloseKernelSize)));
 	cv::morphologyEx(binaryFrame, binaryFrame, cv::MorphTypes::MORPH_OPEN, cv::getStructuringElement(cv::MorphShapes::MORPH_ELLIPSE, cv::Size(defines::openCloseKernelSize, defines::openCloseKernelSize)));
 	
-	//kontury
+	return(binaryFrame);
+}
+
+std::vector<cv::Point2f> Pipeline::findClusters(const cv::Mat& binaryFrame, std::vector<std::vector<cv::Point>>& contours) const
+{
 	//TODO kontur wewnętrzny jest traktowany jako osobny
-	//NOTE kontury to zestawy zestawów punktów 2D, które są wokół znalezionego obszaru
-	std::vector<std::vector<cv::Point>> contours;
-	//NOTE zbiór ustalający kolejność konturów, każdy wektor zawiera 4 elementy oznaczające indeksy: kolejny, poprzedni, rodzica i dziecko
+	//kontury to zestawy zestawów punktów 2D, które są wokół znalezionego obszaru
+
+	//zbiór ustalający kolejność konturów, każdy wektor zawiera 4 elementy oznaczające indeksy: kolejny, poprzedni, rodzica i dziecko
 	std::vector<cv::Vec4i> hierarchy;
 	//TODO dokładniejszy sposób obliczeń dla obwarzanków, które mają dodatkowe kontury wewnątrz
-	//NOTE druga część to aproksymacja czy trzymać wszystkie piksele czy tylko otoczkę
+	//druga część to aproksymacja czy trzymać wszystkie piksele czy tylko otoczkę
 	cv::findContours(binaryFrame, contours, hierarchy, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 	
 	//narysuj kontury i oblicz środki
@@ -168,32 +156,70 @@ void Pipeline::runLoop()
 	std::vector<cv::Point2f> contourCenters(contours.size());
 	for(size_t idx = 0; idx < contours.size(); idx++)
 	{
-		//kolor zmienia się z każdym kolejnym konturem
-		const cv::Scalar color(128 + 128 * (idx / contours.size()), 0, 255);
-		cv::drawContours(displayFrame, contours, idx, color, markersWidth);
-		
 		//oblicz środek konturu
 		cv::Moments moments = cv::moments(contours[idx], true);
 		double posX = moments.m10 / moments.m00;
 		double posY = moments.m01 / moments.m00;
 		contourCenters.at(idx) = cv::Point2f(posX, posY);
-		cv::circle(displayFrame, contourCenters.at(idx), markersSize, color * 0.2, markersWidth);
-// 		cv::drawMarker(displayFrame, contourCenters.at(idx), color * 0.2, cv::MARKER_STAR, 20);
 	}
 	
 	//klastrowanie
+	std::vector<cv::Point2f> clusterCenters;
 	if(contourCenters.size() > 0)
 	{
 		cv::Mat bestLabels;
-		std::vector<cv::Point2f> clusterCenters;
 		//kryterium ilości powtórzeń bądź dokładności
 		cv::kmeans(contourCenters, std::min<int>(4, contourCenters.size()), bestLabels, cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, defines::clusteringMaxIterations, defines::clusteringMinEpsilon), 5, cv::KMEANS_PP_CENTERS, clusterCenters);
-		for(const cv::Point2f& point : clusterCenters)
-		{
-			//narysuj markery
-// 			cv::drawMarker(displayFrame, point, cv::Scalar(255, 255, 255), cv::MARKER_DIAMOND);
-			cv::circle(displayFrame, point, 2 * markersSize, cv::Scalar(255, 255, 255), markersWidth);
-		}
+	}
+	
+	return(clusterCenters);
+}
+
+void Pipeline::runLoop()
+{	
+	cv::Mat oneFrame = this->getFrame();
+	
+	//klatka do podglądu
+	cv::Mat displayFrame = oneFrame.clone();
+	const unsigned int markersWidth = displayFrame.cols / 150;
+	const unsigned int markersSize = displayFrame.cols / 40;
+	
+	//odejmij tło od obrazu
+	oneFrame = oneFrame - this->getBackground();
+	
+	//filtr medianowy
+	//TODO to jest strasznie ciężkie, może dało by się bez albo sprzętowo NEONem
+	//TODO filtr bilateralny?
+	static_assert(defines::smoothKernelSize % 2 == 1);
+// 	cv::medianBlur(oneFrame, smoothFrame, defines::smoothKernelSize);
+	//FIXME na razie zwykłe rozmycie
+	cv::blur(oneFrame, oneFrame, cv::Size(5, 5));
+	
+	//przekształcenia kolorów i progowanie
+	cv::Mat binaryFrame = this->thresholdLuminance(oneFrame);
+	
+	//znajdź środki klastrów
+	std::vector<std::vector<cv::Point>> contours;
+	std::vector<cv::Point2f> clusters = this->findClusters(binaryFrame, contours);
+	
+	//narysuj kontury
+	for(size_t idx = 0; idx < contours.size(); idx++)
+	{
+		//kolor zmienia się z każdym kolejnym konturem (format BGR)
+		const cv::Scalar color(255, 0, 255.0 * idx / contours.size());
+		cv::drawContours(displayFrame, contours, idx, color, markersWidth);
+	}
+	
+	//narysuj środki klastrów
+	for(const cv::Point2f& point : clusters)
+	{
+		cv::circle(displayFrame, point, 2 * markersSize, cv::Scalar(255, 255, 255), markersWidth);
+	}
+	
+	//narysuj detektywów
+	for(const cv::Point2f& point : this->detectives)
+	{
+		cv::circle(displayFrame, point, markersSize, cv::Scalar(127, 127, 255), markersWidth);
 	}
 	
 	//zmień wielkość obrazu do podglądu
