@@ -20,7 +20,8 @@ videoCapture(),
 gpioOutput(),
 background(),
 detectives{{{0, 0}, {0, static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), static_cast<float>(this->params.height)}, {static_cast<float>(this->params.width), 0}}},
-detectiveHistory()
+detectiveHistory(),
+lastFrameTime(std::chrono::steady_clock::now())
 {
 	//otwarcie wideo
 	this->videoCapture.setExceptionMode(true);
@@ -176,7 +177,7 @@ std::vector<cv::Point2f> Pipeline::findClusters(const cv::Mat& binaryFrame, std:
 	return(clusterCenters);
 }
 
-void pipeline::Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
+void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 {
 	//odległości detektyw i klaster
 	std::vector<std::tuple<double, std::reference_wrapper<const cv::Point2f>, std::reference_wrapper<const cv::Point2f>>> distances;
@@ -201,8 +202,15 @@ void pipeline::Pipeline::trackDetectives(const std::vector<cv::Point2f>& cluster
 	while(not distances.empty())
 	{
 		auto [distance, detective, cluster] = distances.front();
+		//znormalizuj dystans w stosunku do wielkości ekranu
+		const unsigned int mediumScreenSize = (this->params.width + this->params.height) / 2.0;
+		const double distanceNormalized = distance / mediumScreenSize;
+		const double detectiveMoveNormalized = defines::detectiveFunction(distanceNormalized);
+		const double deltaTime = static_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - this->lastFrameTime).count();
+		const double detectiveMoveNormalizedClamped = std::clamp(detectiveMoveNormalized * deltaTime * defines::detectiveSpeed, 0.0, 1.0);
+		const cv::Point2f detectiveMove = (cluster.get() - detective.get()) * detectiveMoveNormalizedClamped;
 		//ustaw detektywa w nowym miejscu
-		*std::find(this->detectives.begin(), this->detectives.end(), detective.get()) = cluster;
+		*std::find(this->detectives.begin(), this->detectives.end(), detective.get()) = detective.get() + detectiveMove;
 		
 		//usuń wszystkie z listy
 		distances.erase(std::remove_if(distances.begin(), distances.end(), [&detective, &cluster](auto& v){
@@ -294,6 +302,9 @@ void Pipeline::runLoop()
 	PipelineResult result;
 	result.view = displayFrame;
 	this->pipelineResult.store(result);
+	
+	//aktualizuj czas
+	this->lastFrameTime = std::chrono::steady_clock::now();
 }
 
 

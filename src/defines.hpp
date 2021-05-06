@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <algorithm>
 
 /// Generalne ustawienia programu
 namespace defines
@@ -85,5 +86,19 @@ namespace defines
 	
 	/// Funkcja do tworzenia nazwy pliku do sterowania GPIO (ponieważ numer jest w środku ścieżki)
 	const std::function<std::string(unsigned int)> gpioControlFile = [](unsigned int gpio){return("/sys/class/gpio/gpio" + std::to_string(gpio) + "/value");};
+	
+	/// Współczynnik prędkości przemieszczania się detektywów
+	const double detectiveSpeed = 5;
+	
+	/// Funkcja opóźniająca detektywa
+	const std::function<double(double)> detectiveFunction = [](double x){
+		//dla niskich wartości zwracamy 1 - detektyw się rusza natychmiastowo
+		//dla wysokich wartości asymtotycznie do 0
+		//const double value = 0.15 / (x + 0.1);
+		//return(std::min(value, 1.0));
+		return(0.1 / x);
+		//const double width = 2.6;
+		//return(2.1 * width * (x + 0.4) / std::pow(2, width * (x + 0.4)));
+	};
 	
 }
