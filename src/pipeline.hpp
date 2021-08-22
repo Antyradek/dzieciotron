@@ -8,6 +8,7 @@
 #include "pipeline_result.hpp"
 #include "task.hpp"
 #include "defines.hpp"
+#include "lucipher.hpp"
 
 /// Funkcje do przetwarzania potokowego obszarów z jednej kamery
 namespace pipeline
@@ -23,6 +24,9 @@ private:
 	
 	/// Miejsce gdzie wsadzamy rezultat
 	AtomicPipelineResult& pipelineResult;
+	
+	/// Sterowanie oświetleniem
+	externals::Lucipher& lucipher;
 	
 	/// Główne połączenie z kamerą lub plikiem wideo
 	cv::VideoCapture videoCapture;
@@ -63,14 +67,15 @@ private:
 	/// Śledzi klastry przez detektywów
 	void trackDetectives(const std::vector<cv::Point2f>& clusters);
 	
+	/// Główna pętla
+	void runLoop() override;
+	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
-	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult);
+	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher);
 	
 	/// Zamyka połączenie do kamer
 	virtual ~Pipeline() {}
-	
-	/// Główna pętla
-	void runLoop() override;
+
 };
 }

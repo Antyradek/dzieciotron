@@ -5,8 +5,9 @@
 
 using namespace debug;
 
-DummyPipeline::DummyPipeline(pipeline::AtomicPipelineResult& pipelineResult):
-pipelineResult(pipelineResult) {}
+DummyPipeline::DummyPipeline(pipeline::AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher):
+pipelineResult(pipelineResult),
+lucipher(lucipher) {}
 
 void DummyPipeline::runLoop()
 {
@@ -15,6 +16,12 @@ void DummyPipeline::runLoop()
 	for(int i = 0; i < 5; i++)
 	{
 		cv::circle(image, cv::Point(image.cols / 2, image.rows / 2), rand() % image.rows, cv::Scalar(rand() % 255, rand() % 255, rand() % 255), 5);
+	}
+	
+	//oświetlenie
+	if (rand() % 100 < 10)
+	{
+		this->lucipher.light(rand() % 100 / 100.0);
 	}
 	
 	pipeline::PipelineResult result;

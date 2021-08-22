@@ -14,11 +14,14 @@ private:
 	/// Nazwa okna robi także za identyfikator
 	const std::string windowName;
 	
+	/// Wyświetla okienko
+	void runLoop() override;
+	
 public:
 	/// Pokazuje widok na ekranie
 	ViewShower(pipeline::AtomicPipelineResult& viewResult);
-	
-	/// Wyświetla okienko
-	void runLoop() override;
+
+	/// Pusty destruktor
+	virtual ~ViewShower() {}
 };
 }

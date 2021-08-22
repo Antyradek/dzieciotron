@@ -90,6 +90,12 @@ namespace defines
 	/// Współczynnik prędkości przemieszczania się detektywów
 	const double detectiveSpeed = 5;
 	
+	/// Prędkość spadku oświetlenia
+	const double lightFadeOffSpeed = 0.3;
+	
+	/// Ilość odświeżeń na sekundę światła
+	const double lightFps = 5;
+	
 	/// Funkcja opóźniająca detektywa
 	const std::function<double(double)> detectiveFunction = [](double x){
 		//dla niskich wartości zwracamy 1 - detektyw się rusza natychmiastowo

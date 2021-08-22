@@ -23,14 +23,14 @@ private:
 	/// Rezultat do wysyłania podglądu obrazu
 	pipeline::AtomicPipelineResult& viewResult;
 	
+	/// Jedno przetworzenie
+	void runLoop() override;
+	
 public:
 	/// Oblicza pozycję na podstawie rezultatów
 	Locationer(pipeline::AtomicPipelineResult& leftResult, pipeline::AtomicPipelineResult& centerResult, pipeline::AtomicPipelineResult& rightResult, pipeline::AtomicPipelineResult& viewResult);
 	
 	/// Pusty destruktor
 	virtual ~Locationer(){}
-	
-	/// Jedno przetworzenie
-	void runLoop() override;
 };
 }

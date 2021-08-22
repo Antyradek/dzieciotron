@@ -12,10 +12,11 @@
 using namespace pipeline;
 using namespace utils;
 
-Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult):
+Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher):
 dzieciotron::AsyncTask(),
 params(params),
 pipelineResult(pipelineResult),
+lucipher(lucipher),
 videoCapture(),
 gpioOutput(),
 background(),

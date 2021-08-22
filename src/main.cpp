@@ -300,21 +300,23 @@ int main()
 	pipeline::AtomicPipelineResult rightResult;
 	pipeline::AtomicPipelineResult viewResult;
 	
-	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult);
+	externals::Lucipher lucipher;
+	
+	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult, lucipher);
 	locationer::Locationer locationer(leftResult, centerResult, rightResult, viewResult);
 	
 	//w debugu potoki dwóch pozostałych kamer są sztuczne
 #ifndef GUI_DEBUG
-	pipeline::Pipeline leftPipeline(defines::leftCameraParams, leftResult);
-	pipeline::Pipeline rightPipeline(defines::rightCameraParams, rightResult);
+	pipeline::Pipeline leftPipeline(defines::leftCameraParams, leftResult, lucipher);
+	pipeline::Pipeline rightPipeline(defines::rightCameraParams, rightResult, lucipher);
 	view::ViewSender viewSender(defines::viewPipe, viewResult);
 #else
-	debug::DummyPipeline leftPipeline(leftResult);
-	debug::DummyPipeline rightPipeline(rightResult);
+	debug::DummyPipeline leftPipeline(leftResult, lucipher);
+	debug::DummyPipeline rightPipeline(rightResult, lucipher);
 	debug::ViewShower viewSender(viewResult);
 #endif
 	
-	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 5> tasks {{centerPipeline, leftPipeline, rightPipeline, locationer, viewSender}};
+	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 6> tasks {{centerPipeline, leftPipeline, rightPipeline, locationer, viewSender, lucipher}};
 	
 	//obsługa sygnału
 	globals::exitCallback = [&tasks](){

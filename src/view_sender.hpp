@@ -19,14 +19,14 @@ private:
 	/// Synchronizacja z której bierzemy obraz
 	pipeline::AtomicPipelineResult& viewResult;
 	
+	/// Wyślij jedną ramkę
+	void runLoop() override;
+	
 public:
 	/// Będzie wysyłał dane na podany potok, synchronizowane
 	ViewSender(const std::string& pipeName, pipeline::AtomicPipelineResult& viewResult);
 	
 	/// Usuwa stworzone potoki
 	virtual ~ViewSender();
-	
-	/// Wyślij jedną ramkę
-	void runLoop() override;
 };
 }
