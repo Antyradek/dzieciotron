@@ -7,9 +7,8 @@ endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES}) 
 
-# który mamy rok, przypomnij?
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
-set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror)
+set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror -g3)
 
 # czasami OpenCV instaluje się w dziwnych miejscach
 target_include_directories(${PROJECT_NAME} PRIVATE /usr/include/opencv4)

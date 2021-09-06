@@ -5,7 +5,7 @@
 #include "logger.hpp"
 
 using namespace debug;
-using namespace utils;
+using namespace logger;
 
 ViewShower::ViewShower(pipeline::AtomicPipelineResult& viewResult):
 viewResult(viewResult),

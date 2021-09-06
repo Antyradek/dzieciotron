@@ -6,11 +6,12 @@
 #include <opencv2/imgproc.hpp>
 #include "logger.hpp"
 #include "exceptions.hpp"
+#include "utils.hpp"
 
 #include <cstdio>
 
 using namespace pipeline;
-using namespace utils;
+using namespace logger;
 
 Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher):
 dzieciotron::AsyncTask(),
@@ -39,17 +40,7 @@ lastFrameTime(std::chrono::steady_clock::now())
 	}
 	
 	//GPIO
-	this->gpioOutput.exceptions(std::ofstream::badbit | std::ofstream::failbit);
-	try
-	{
-#ifndef GUI_DEBUG
-		this->gpioOutput.open(defines::gpioControlFile(this->params.gpioPin), std::ofstream::out);
-#endif
-	}
-	catch(const std::ofstream::failure& err)
-	{
-		throw(CameraError("Błąd ustawiania wyjść GPIO"));
-	}
+	utils::openFile(defines::gpioControlFile(this->params.gpioPin), this->gpioOutput);
 	
 	//zaktualizuj tło
 	this->updateBackground();
@@ -60,11 +51,7 @@ lastFrameTime(std::chrono::steady_clock::now())
 
 void Pipeline::setDiode(bool on)
 {
-#ifndef GUI_DEBUG
 	this->gpioOutput << (on ? "1" : "0") << std::endl;
-#else
-	(void) on;
-#endif
 }
 
 void Pipeline::updateBackground()
@@ -289,6 +276,13 @@ void Pipeline::runLoop()
 	for(size_t i = 0; i < this->detectives.size(); i++)
 	{
 		cv::circle(displayFrame, this->detectives.at(i), markersSize, cv::Scalar(127, 255.0 * i / this->detectives.size(), 255), markersWidth);
+	}
+	
+	//FIXME
+	//oświetlenie
+	if (rand() % 100 < 3)
+	{
+		this->lucipher.light(rand() % 100 / 100.0);
 	}
 	
 	//zmień wielkość obrazu do podglądu

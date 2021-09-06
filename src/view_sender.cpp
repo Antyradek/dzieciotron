@@ -11,7 +11,7 @@
 #include "exceptions.hpp"
 
 using namespace view;
-using namespace utils;
+using namespace logger;
 
 ViewSender::ViewSender(const std::string& pipeName, pipeline::AtomicPipelineResult& viewResult):
 dzieciotron::AsyncTask(),
@@ -19,16 +19,19 @@ pipeName(pipeName),
 pipeHandle(0),
 viewResult(viewResult)
 {
-	//otwarcie nowej rury, powinna być stworzona wcześniej przez system
-	this->pipeHandle = open(this->pipeName.c_str(), O_WRONLY);
-	if(this->pipeHandle < 0)
-	{
-		throw(OutputError("Błąd otwierania potoku " + this->pipeName + ": " + strerror(errno)));
-	}
+	//TODO usunąć jeśli poprawnie otwiera w pętli
+// 	//otwarcie nowej rury, powinna być stworzona wcześniej przez system
+// 	this->pipeHandle = open(this->pipeName.c_str(), O_WRONLY);
+// 	if(this->pipeHandle < 0)
+// 	{
+// 		throw(OutputError("Błąd otwierania potoku " + this->pipeName + ": " + strerror(errno)));
+// 	}
 }
 
 ViewSender::~ViewSender()
 {
+	Logger::debug() << "Zamykanie potoku";
+	
 	//zamknij
 	if(this->pipeHandle > 0)
 	{
@@ -37,13 +40,16 @@ ViewSender::~ViewSender()
 	
 	//ta operacja może się nie udać jeśli ktoś czyta
 	unlink(this->pipeName.c_str());
+	
+	Logger::debug() << "Zamyknięto potok";
 }
 
 void ViewSender::runLoop()
 {
 	//próbujemy otworzyć potok jeśli nie jest otwarty
-	if(pipeHandle == 0)
+	if(this->pipeHandle == 0)
 	{
+		Logger::debug() << "Otwieranie potoku";
 		//zobacz czy byłby otwarty
 		const int openNonblockRet = open(this->pipeName.c_str(), O_WRONLY | O_NONBLOCK);
 		if(openNonblockRet > 0)
@@ -88,6 +94,7 @@ void ViewSender::runLoop()
 	cv::cvtColor(image, image, cv::COLOR_BGR2YUV_I420);
 	
 	//zapisujemy do potoku
+	Logger::debug() << "Zapis do potoku";
 	const int writeRet = write(this->pipeHandle, image.data, image.total());
 	if(writeRet < 0 || (writeRet > 0 && static_cast<size_t>(writeRet) != image.total()))
 	{

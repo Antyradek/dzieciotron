@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 
-namespace utils
+namespace logger
 {
 
 /// Proste logowanie zdarzeń

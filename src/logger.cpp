@@ -1,7 +1,7 @@
 #include "logger.hpp" 
 #include <iostream>
 
-using namespace utils;
+using namespace logger;
 
 Logger::Logger(Logger::LoggerContext context): context(context) { }
 

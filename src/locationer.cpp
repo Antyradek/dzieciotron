@@ -6,7 +6,7 @@
 #include "logger.hpp"
 
 using namespace locationer;
-using namespace utils;
+using namespace logger;
 
 Locationer::Locationer(pipeline::AtomicPipelineResult& leftResult, pipeline::AtomicPipelineResult& centerResult, pipeline::AtomicPipelineResult& rightResult, pipeline::AtomicPipelineResult& viewResult):
 leftResult(leftResult),

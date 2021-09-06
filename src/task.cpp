@@ -4,7 +4,7 @@
 #include "logger.hpp"
 
 using namespace dzieciotron;
-using namespace utils;
+using namespace logger;
 
 AsyncTask::AsyncTask():
 isWorkingFlag(false),
@@ -30,7 +30,7 @@ void AsyncTask::pause(bool pause)
 	{
 		std::lock_guard<std::mutex> lock(this->pauseMutex);
 		this->isPaused = false;
-		this->pauseCondition.notify_all();
+		this->pauseCondition.notify_one();
 	}
 }
 

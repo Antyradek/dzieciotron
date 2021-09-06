@@ -39,7 +39,7 @@
 // const std::string cametaText = "camera";
 // const std::string outputText = "output";
 // const std::string markerText = "markerfile";
-using namespace utils;
+using namespace logger;
 // 
 // /// Jeden rekord do jednej ramki z pliku do oznaczania markerów
 // struct MarkerRecord
@@ -300,7 +300,7 @@ int main()
 	pipeline::AtomicPipelineResult rightResult;
 	pipeline::AtomicPipelineResult viewResult;
 	
-	externals::Lucipher lucipher;
+	externals::Lucipher lucipher(defines::lucipherParams);
 	
 	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult, lucipher);
 	locationer::Locationer locationer(leftResult, centerResult, rightResult, viewResult);
