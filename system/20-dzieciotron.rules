@@ -1,0 +1,3 @@
+# Pozwolenia dla dzieciotrona na modyfikację hubów USB w celu resetu zasilania kamer SQ11
+SUBSYSTEM=="usb", ATTR{idVendor}=="2109", ATTR{idProduct}=="3431", MODE="0664", GROUP="dzieciotron"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d6b", ATTR{idProduct}=="0003", MODE="0664", GROUP="dzieciotron"

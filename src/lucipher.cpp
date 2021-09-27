@@ -27,9 +27,9 @@ lightEnabled(false)
 		auto& [filename, file] = pair;
 		utils::openFile(filename, file);
 	}
-	this->pwmEnableOutput << "0" << std::endl;
-	this->pwmOutput << "0" << std::endl;
 	periodFile << this->params.period << std::endl;
+	this->pwmOutput << "0" << std::endl;
+	this->pwmEnableOutput << "0" << std::endl;
 }
 
 Lucipher::~Lucipher()

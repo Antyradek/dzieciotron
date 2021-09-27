@@ -94,7 +94,6 @@ void ViewSender::runLoop()
 	cv::cvtColor(image, image, cv::COLOR_BGR2YUV_I420);
 	
 	//zapisujemy do potoku
-	Logger::debug() << "Zapis do potoku";
 	const int writeRet = write(this->pipeHandle, image.data, image.total());
 	if(writeRet < 0 || (writeRet > 0 && static_cast<size_t>(writeRet) != image.total()))
 	{

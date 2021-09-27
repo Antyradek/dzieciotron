@@ -134,7 +134,7 @@ namespace defines
 	const double lightFadeOffSpeed = 0.3;
 	
 	/// Ilość odświeżeń na sekundę światła
-	const double lightFps = 5;
+	const double lightFps = 15;
 	
 	/// Funkcja opóźniająca detektywa
 	const std::function<double(double)> detectiveFunction = [](double x){
