@@ -13,11 +13,12 @@
 using namespace pipeline;
 using namespace logger;
 
-Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher):
+Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher, externals::Hubber& hubber):
 dzieciotron::AsyncTask(),
 params(params),
 pipelineResult(pipelineResult),
 lucipher(lucipher),
+hubber(hubber),
 videoCapture(),
 gpioOutput(),
 background(),

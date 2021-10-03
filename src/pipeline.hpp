@@ -9,6 +9,7 @@
 #include "task.hpp"
 #include "defines.hpp"
 #include "lucipher.hpp"
+#include "hubber.hpp"
 
 /// Funkcje do przetwarzania potokowego obszarów z jednej kamery
 namespace pipeline
@@ -27,6 +28,9 @@ private:
 	
 	/// Sterowanie oświetleniem
 	externals::Lucipher& lucipher;
+	
+	/// Resetowanie USB
+	externals::Hubber& hubber;
 	
 	/// Główne połączenie z kamerą lub plikiem wideo
 	cv::VideoCapture videoCapture;
@@ -72,7 +76,7 @@ private:
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
-	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher);
+	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher, externals::Hubber& hubber);
 	
 	/// Zamyka połączenie do kamer
 	virtual ~Pipeline() {}

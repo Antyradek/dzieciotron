@@ -19,6 +19,7 @@
 #include "defines.hpp"
 #include "locationer.hpp"
 #include "view_sender.hpp"
+#include "hubber.hpp"
 
 #ifdef GUI_DEBUG
 	#include "debug/dummy_pipeline.hpp"
@@ -301,14 +302,15 @@ int main()
 	pipeline::AtomicPipelineResult viewResult;
 	
 	externals::Lucipher lucipher(defines::lucipherParams);
+	externals::Hubber hubber(defines::hubParams);
 	
-	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult, lucipher);
+	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult, lucipher, hubber);
 	locationer::Locationer locationer(leftResult, centerResult, rightResult, viewResult);
 	
 	//w debugu potoki dwóch pozostałych kamer są sztuczne
 #ifndef GUI_DEBUG
-	pipeline::Pipeline leftPipeline(defines::leftCameraParams, leftResult, lucipher);
-	pipeline::Pipeline rightPipeline(defines::rightCameraParams, rightResult, lucipher);
+	pipeline::Pipeline leftPipeline(defines::leftCameraParams, leftResult, lucipher, hubber);
+	pipeline::Pipeline rightPipeline(defines::rightCameraParams, rightResult, lucipher, hubber);
 	view::ViewSender viewSender(defines::viewPipe, viewResult);
 #else
 	debug::DummyPipeline leftPipeline(leftResult, lucipher);
@@ -316,7 +318,7 @@ int main()
 	debug::ViewShower viewSender(viewResult);
 #endif
 	
-	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 6> tasks {{centerPipeline, leftPipeline, rightPipeline, locationer, viewSender, lucipher}};
+	std::array<std::reference_wrapper<dzieciotron::AsyncTask>, 7> tasks {{centerPipeline, leftPipeline, rightPipeline, locationer, viewSender, lucipher, hubber}};
 	
 	//obsługa sygnału
 	globals::exitCallback = [&tasks](){

@@ -66,6 +66,16 @@ namespace defines
 		period(1'000'000'000 / frequency) {}
 	};
 	
+	/// Parametry resetowania Huba USB
+	struct HubParams
+	{
+		/// Czas restartu Huba
+		std::chrono::milliseconds hubRestartTime;
+		
+		HubParams(const std::chrono::milliseconds& restartTime):
+		hubRestartTime(restartTime) {}
+	};
+	
 	/// Parametry centralnej kamery
 	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 15, false, 0.3);
 	
@@ -81,6 +91,9 @@ namespace defines
 #else
 	const PwmParams lucipherParams("/tmp/pwm_enable", "/tmp/pwm_duty_cycle", "/tmp/pwm_period", 2);
 #endif
+	
+	/// Parametry huba
+	const HubParams hubParams(std::chrono::milliseconds(2000));
 	
 	/// Czas przełączenia diody
 	const std::chrono::milliseconds diodeToggleTime(100);

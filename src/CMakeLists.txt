@@ -14,7 +14,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werr
 target_include_directories(${PROJECT_NAME} PRIVATE /usr/include/opencv4)
 
 #target_link_libraries(${PROJECT_NAME} opencv_highgui rt boost_program_options)
-target_link_libraries(${PROJECT_NAME} pthread opencv_core opencv_videoio opencv_imgproc)
+target_link_libraries(${PROJECT_NAME} pthread opencv_core opencv_videoio opencv_imgproc usb-1.0)
 
 if(${GUI_DEBUG})
 	target_link_libraries(${PROJECT_NAME} opencv_highgui)
