@@ -1,4 +1,5 @@
 #include "hubber.hpp"
+#include <thread>
 #include "logger.hpp"
 #include "exceptions.hpp"
 
@@ -8,57 +9,77 @@ using namespace logger;
 Hubber::Hubber(const defines::HubParams& params):
 params(params),
 isResetting(false),
-usbContext(nullptr, libusb_exit)
+usbContext(nullptr, libusb_exit),
+usbDevices(nullptr, std::bind(libusb_free_device_list, std::placeholders::_1, true)),
+usbDevicesCount(0),
+hardwareHub(nullptr),
+softwareHub(nullptr)
 {
 	this->pause(true);
 	
+	//kontekst USB
 	this->usbContext.reset([](){
 		libusb_context* context;
 		const int err = libusb_init(&context);
 		if(err != 0)
 		{
-			throw UsbError("Błąd inicjalizacji libusb");
+			throw(UsbError("Błąd inicjalizacji libusb"));
 		}
 		return(context);
 	}());
 	
-	/*
-	struct libusb_device **usb_devs = nullptr;
-	//kontekst
-	int devs = libusb_get_device_list(nullptr, &usb_devs);
-	assert(devs > 0);
-	struct libusb_device* hub = nullptr;
-	struct libusb_device* unixhub = nullptr;
-	for(int i = 0; i < devs; i++)
-	{
-		struct libusb_device_descriptor desc;
-		err = libusb_get_device_descriptor(usb_devs[i], &desc);
-		assert(err == 0); 
-		if(desc.idVendor == 0x2109 && desc.idProduct == 0x3431)
+	//lista urządzeń USB
+	this->usbDevices.reset([this](){
+		libusb_device** devices;
+		const int devcount = libusb_get_device_list(this->usbContext.get(), &devices);
+		if(devcount <= 0)
 		{
-			hub = usb_devs[i];
+			throw(UsbError("Błąd odnajdywania urządzeń USB"));
 		}
-		if(desc.idVendor == 0x1D6B && desc.idProduct == 0x0003)
+		this->usbDevicesCount = devcount;
+		return(devices);
+	}());
+	
+	//szukaj urządzeń
+	for(size_t i = 0; i < this->usbDevicesCount; i++)
+	{
+		libusb_device_descriptor descriptor;
+		const int errcode = libusb_get_device_descriptor(this->usbDevices[i], &descriptor);
+		if(errcode != 0)
 		{
-			unixhub = usb_devs[i];
+			throw(UsbError("Błąd pobierania deskryptora"));
+		}
+		if(descriptor.idVendor == this->params.hardwareVidPid.first && descriptor.idProduct == this->params.hardwareVidPid.second)
+		{
+			this->hardwareHub = this->usbDevices[i];
+		}
+		else if(descriptor.idVendor == this->params.softwareVidPid.first && descriptor.idProduct == this->params.softwareVidPid.second)
+		{
+			this->softwareHub = this->usbDevices[i];
 		}
 	}
-	assert(hub != nullptr);
-	assert(unixhub != nullptr);
+}
+
+void Hubber::setPower(struct libusb_device* hub, bool turnOn)
+{
+	std::unique_ptr<libusb_device_handle, std::function<void(libusb_device_handle*)>> device([&hub](){
+		libusb_device_handle* handle;
+		const int outerr = libusb_open(hub, &handle);
+		if(outerr != 0)
+		{
+			throw(UsbError("Błąd uzyskiwania uchwytu urządzenia USB"));
+		}
+		return(handle);
+	}(), libusb_close);
 	
-	setOn(unixhub, {1}, false);
-	setOn(hub, {1}, false);
-	std::cout << "Wyłączono" << std::endl;
-	// 	std::this_thread::sleep_for (std::chrono::seconds(1));
-	setOn(unixhub, {1}, true);
-	setOn(hub, {1}, true);
-	std::cout << "Włączono" << std::endl;
-	
-	
-	//czy zwolnić poprawnie
-	libusb_free_device_list(usb_devs, true);
-	*/
-	
+	//uchwyt, typ, żądanie, flaga_featura, port, dane, wielkość_danych, timeout_ms
+	const libusb_standard_request requestType = turnOn ? LIBUSB_REQUEST_SET_FEATURE : LIBUSB_REQUEST_CLEAR_FEATURE;
+	const int outerr = libusb_control_transfer(device.get(), LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_OTHER, requestType, this->params.powerFlag, this->params.port, nullptr, 0, std::chrono::milliseconds(defines::usbSetPowerTimeout).count());
+	if(outerr < 0)
+	{
+		throw(UsbError("Błąd wysyłania komendy kontroli USB"));
+	}
+	libusb_reset_device(device.get());
 }
 
 void Hubber::reset()
@@ -74,6 +95,18 @@ void Hubber::runLoop()
 {
 	//rozpoczynamy reset
 	Logger::debug() << "Restartowanie huba USB...";
+	this->setPower(this->softwareHub, false);
+	this->setPower(this->hardwareHub, false);
+	Logger::debug() << "Odłączono zasilanie USB";
+	this->setPower(this->softwareHub, true);
+	this->setPower(this->hardwareHub, true);
+	Logger::debug() << "Podłączono zasilanie USB";
+	//czekaj na aktywację
+	std::this_thread::sleep_for(defines::cameraBootTime);
+	Logger::debug() << "Zrestartowano hub USB";
 	
+	//deaktywacja włączania
+	this->pause(true);
+	this->isResetting = false;
 }
 

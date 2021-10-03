@@ -1,33 +1,39 @@
 #pragma once
 #include <stdexcept>
 
-/// Błąd kamery
-class CameraError : public std::runtime_error
+/// Błąd Dzieciotrona
+class DzieciotronError : public std::runtime_error
 {
 	using std::runtime_error::runtime_error;
+};
+
+/// Błąd kamery
+class CameraError : public DzieciotronError
+{
+	using DzieciotronError::DzieciotronError;
 };
 
 /// Błąd wyjścia pliku
-class OutputError : public std::runtime_error
+class OutputError : public DzieciotronError
 {
-	using std::runtime_error::runtime_error;
+	using DzieciotronError::DzieciotronError;
 };
 
 /// Błąd licznika czasu
-class TimerError : public std::runtime_error
+class TimerError : public DzieciotronError
 {
-	using std::runtime_error::runtime_error;
+	using DzieciotronError::DzieciotronError;
 };
 
 /// Błąd otwierania pliku
-class FileError: public std::runtime_error
+class FileError: public DzieciotronError
 {
-	using std::runtime_error::runtime_error;
+	using DzieciotronError::DzieciotronError;
 };
 
 /// Błąd USB
-class UsbError: public std::runtime_error
+class UsbError: public DzieciotronError
 {
-	using std::runtime_error::runtime_error;
+	using DzieciotronError::DzieciotronError;
 };
 

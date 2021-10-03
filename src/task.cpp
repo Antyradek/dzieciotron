@@ -43,13 +43,13 @@ void AsyncTask::run()
 	{
 		try
 		{
-			this->runLoop();
 			if(this->isPaused)
 			{
 				//zawieszenie się na zmiennej
 				std::unique_lock<std::mutex> lock(this->pauseMutex);
 				this->pauseCondition.wait(lock, [this](){return(!this->isPaused);});
 			}
+			this->runLoop();
 		}
 		catch(const std::exception& err)
 		{

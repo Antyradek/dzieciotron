@@ -50,6 +50,9 @@ private:
 	/// Czas po zakończeniu przetwarzania ostatniej klatki
 	std::chrono::time_point<std::chrono::steady_clock> lastFrameTime;
 	
+	/// Włącza podgląd wideo
+	void openVideo();
+	
 	/// Włącza i wyłącza światło diody
 	void setDiode(bool on);
 	

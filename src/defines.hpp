@@ -72,8 +72,24 @@ namespace defines
 		/// Czas restartu Huba
 		std::chrono::milliseconds hubRestartTime;
 		
-		HubParams(const std::chrono::milliseconds& restartTime):
-		hubRestartTime(restartTime) {}
+		/// VID PID huba sprzętowego
+		std::pair<uint16_t, uint16_t> hardwareVidPid;
+		
+		/// VID PID huba systemowego
+		std::pair<uint16_t, uint16_t> softwareVidPid;
+		
+		/// Flaga ustawień zasilania w kontroli USB
+		unsigned int powerFlag;
+		
+		/// Port USB dla kontroli zasilania
+		unsigned int port;
+		
+		HubParams(const std::chrono::milliseconds& restartTime, const std::pair<uint16_t, uint16_t>& hardwareVidPid, const std::pair<uint16_t, uint16_t>& softwareVidPid, unsigned int powerFlag, unsigned int port):
+		hubRestartTime(restartTime),
+		hardwareVidPid(hardwareVidPid),
+		softwareVidPid(softwareVidPid),
+		powerFlag(powerFlag),
+		port(port) {}
 	};
 	
 	/// Parametry centralnej kamery
@@ -93,10 +109,22 @@ namespace defines
 #endif
 	
 	/// Parametry huba
-	const HubParams hubParams(std::chrono::milliseconds(2000));
+	const HubParams hubParams(std::chrono::milliseconds(2000), {0x2109, 0x3431}, {0x1D6B, 0x0003}, 0b1000, 1);
+	
+	/// Timeout zmiany zasilania huba USB
+	const std::chrono::milliseconds usbSetPowerTimeout(500);
 	
 	/// Czas przełączenia diody
 	const std::chrono::milliseconds diodeToggleTime(100);
+	
+	/// Czas maksymalnego czasu inicjalizacji kamer
+	const std::chrono::milliseconds maxVideoStartTime(5000);
+	
+	/// Czas oczekiwania po restarcie kamery
+	const std::chrono::milliseconds cameraResetTime(1000);
+	
+	/// Czas bootowania się kamer
+	const std::chrono::milliseconds cameraBootTime(2000);
 	
 	/// Wielkość jądra wygładzania
 	const unsigned int smoothKernelSize = 5;

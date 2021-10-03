@@ -22,6 +22,21 @@ private:
 	/// Kontekst libusb
 	std::unique_ptr<libusb_context, std::function<void(libusb_context*)>> usbContext;
 	
+	/// Lista urządzeń USB
+	std::unique_ptr<libusb_device*[], std::function<void(libusb_device*[])>> usbDevices;
+	
+	/// Ilość urządzeń USB
+	size_t usbDevicesCount;
+	
+	/// Wskaźnik na sprzętowy hub USB
+	libusb_device* hardwareHub;
+	
+	/// Wskaźnik na systemowy hub USB
+	libusb_device* softwareHub;
+	
+	/// Ustaw zasilanie podanego huba
+	void setPower(struct libusb_device* hub, bool turnOn);
+	
 	/// Główna pętla
 	void runLoop() override;
 	

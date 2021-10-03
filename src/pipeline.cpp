@@ -26,19 +26,8 @@ detectives{{{0, 0}, {0, static_cast<float>(this->params.height)}, {static_cast<f
 detectiveHistory(),
 lastFrameTime(std::chrono::steady_clock::now())
 {
-	//otwarcie wideo
-	this->videoCapture.setExceptionMode(true);
-	this->videoCapture.open(this->params.cameraFile, cv::VideoCaptureAPIs::CAP_V4L2);
-	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, this->params.width);
-	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, this->params.height);
-	this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, this->params.fps);
-	//pierwsza klatka
-	cv::Mat firstFrame;
-	this->videoCapture >> firstFrame;
-	if(firstFrame.empty())
-	{
-		throw(CameraError("Pusty obraz"));
-	}
+	//wideo
+	this->openVideo();
 	
 	//GPIO
 	utils::openFile(defines::gpioControlFile(this->params.gpioPin), this->gpioOutput);
@@ -48,6 +37,46 @@ lastFrameTime(std::chrono::steady_clock::now())
 	
 	//wypisanie
 	Logger::debug() << "Ustawienia kamery: " << this->params.cameraFile << " " << this->params.width << "×" << this->params.height << "p" << this->params.fps << " → " << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << this->params.gpioPin;
+}
+
+void Pipeline::openVideo()
+{
+	const auto startTime = std::chrono::system_clock::now();
+	bool set = false;
+	do
+	{
+		try
+		{
+			//otwarcie wideo
+			this->videoCapture.setExceptionMode(true);
+			this->videoCapture.open(this->params.cameraFile, cv::VideoCaptureAPIs::CAP_V4L2);
+			this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH, this->params.width);
+			this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT, this->params.height);
+			this->videoCapture.set(cv::VideoCaptureProperties::CAP_PROP_FPS, this->params.fps);
+			//pierwsza klatka
+			cv::Mat firstFrame;
+			this->videoCapture >> firstFrame;
+			if(firstFrame.empty())
+			{
+				throw(CameraError("Pusty obraz"));
+			}
+			
+			set = true;
+			break;
+		}
+		catch(const DzieciotronError& err)
+		{
+			Logger::error() << "Błąd inicjalizacji kamer: " << err.what();
+			this->hubber.reset();
+			std::this_thread::sleep_for(defines::cameraResetTime);
+		}
+	}
+	while(std::chrono::system_clock::now() - startTime < defines::maxVideoStartTime);
+	
+	if(!set)
+	{
+		throw(CameraError("Wielokrotne próby inicjalizacji kamer się nie udały"));
+	}
 }
 
 void Pipeline::setDiode(bool on)
