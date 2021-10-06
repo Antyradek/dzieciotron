@@ -81,8 +81,8 @@ public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
 	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher, externals::Hubber& hubber);
 	
-	/// Zamyka połączenie do kamer
-	virtual ~Pipeline() {}
+	/// Zamyka połączenie do kamer i wyłącza diody
+	virtual ~Pipeline();
 
 };
 }

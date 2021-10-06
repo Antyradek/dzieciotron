@@ -39,6 +39,11 @@ lastFrameTime(std::chrono::steady_clock::now())
 	Logger::debug() << "Ustawienia kamery: " << this->params.cameraFile << " " << this->params.width << "×" << this->params.height << "p" << this->params.fps << " → " << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << this->params.gpioPin;
 }
 
+Pipeline::~Pipeline()
+{
+	this->setDiode(false);
+}
+
 void Pipeline::openVideo()
 {
 	const auto startTime = std::chrono::system_clock::now();
