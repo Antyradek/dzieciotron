@@ -4,6 +4,7 @@
 #include <fstream>
 #include <list>
 #include <chrono>
+#include <optional>
 #include <opencv2/videoio.hpp>
 #include "pipeline_result.hpp"
 #include "task.hpp"
@@ -42,10 +43,10 @@ private:
 	cv::Mat background;
 	
 	/// Śledzone pozycje tych samych klastrów w przestrzeni pikselowej
-	std::array<cv::Point2f, 4> detectives;
+	std::array<std::optional<cv::Point2f>, 4> detectives;
 	
 	/// Historia kolejnych pozycji detektywów
-	std::list<std::array<cv::Point2f, 4>> detectiveHistory;
+	std::list<std::array<std::optional<cv::Point2f>, 4>> detectiveHistory;
 	
 	/// Czas po zakończeniu przetwarzania ostatniej klatki
 	std::chrono::time_point<std::chrono::steady_clock> lastFrameTime;
