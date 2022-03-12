@@ -6,11 +6,12 @@
 #include <libusb-1.0/libusb.h>
 #include "task.hpp"
 #include "defines.hpp"
+#include "base_hubber.hpp"
 
 namespace externals
 {
 /// Pozwala kontrolować białe oświetlenie w łagodny sposób
-class Hubber: public dzieciotron::AsyncTask
+class Hubber: public BaseHubber
 {
 private:
 	/// Parametry
@@ -48,7 +49,7 @@ public:
 	virtual ~Hubber() {};
 	
 	/// Resetuj wszystkie kamery, może być wołane z wielu wątków
-	void reset();
+	void reset() override;
 };
 }
 

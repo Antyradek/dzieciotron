@@ -45,7 +45,10 @@ public:
 	/// Wyłącza co potrzebne
 	virtual ~Lucipher();
 	
-	/// Rozjaśnij oświetlenie, może być wołane z innych wątków
+	/// Rozjaśnij oświetlenie w zakresie 0..1, może być wołane z innych wątków
 	void light(double value);
+	
+	/// Odczytaj aktualną jasność
+	double light();
 };
 }

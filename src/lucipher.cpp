@@ -50,6 +50,12 @@ void Lucipher::light(double value)
 	}
 }
 
+double Lucipher::light()
+{
+	std::unique_lock<std::mutex> lock(this->lightMutex);
+	return(this->lightness);
+}
+
 void Lucipher::runLoop()
 {
 	{

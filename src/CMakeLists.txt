@@ -1,5 +1,6 @@
 file(GLOB SOURCES *.cpp)
 if(${GUI_DEBUG})
+	message("Budowanie wersji z GUI")
 	file(GLOB DEBUG_SOURES debug/*.cpp)
 	list(APPEND SOURCES ${DEBUG_SOURES})
 	add_compile_definitions(GUI_DEBUG)

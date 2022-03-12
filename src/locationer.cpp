@@ -23,7 +23,7 @@ void Locationer::runLoop()
 	if(leftFrame.view.empty() || centerFrame.view.empty() || rightFrame.view.empty())
 	{
 		//pewnie jeszcze nie zainicjalizowane
-		Logger::debug() << "Puste wejście: lewy=" << leftFrame.view.empty() << " centralny=" << centerFrame.view.empty() << " prawy=" << rightFrame.view.empty();
+		Logger::debug() << "Puste wyjścia z następujących potoków: lewy=" << leftFrame.view.empty() << " centralny=" << centerFrame.view.empty() << " prawy=" << rightFrame.view.empty();
 		std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<uintmax_t>(1000.0 / defines::idleFps)));
 		return;
 	}

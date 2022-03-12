@@ -24,6 +24,7 @@
 #ifdef GUI_DEBUG
 	#include "debug/dummy_pipeline.hpp"
 	#include "debug/view_shower.hpp"
+	#include "debug/dummy_hubber.hpp"
 #endif
 
 // static void setSize(cv::VideoCapture& videoCapture, int width, int height, int fps)
@@ -302,7 +303,11 @@ int main()
 	pipeline::AtomicPipelineResult viewResult;
 	
 	externals::Lucipher lucipher(defines::lucipherParams);
+#ifndef GUI_DEBUG
 	externals::Hubber hubber(defines::hubParams);
+#else
+	debug::DummyHubber hubber;
+#endif
 	
 	pipeline::Pipeline centerPipeline(defines::centerCameraParams, centerResult, lucipher, hubber);
 	locationer::Locationer locationer(leftResult, centerResult, rightResult, viewResult);

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <future>
 #include <opencv2/imgproc.hpp>
+#include <stddef.h>
 #include "logger.hpp"
 #include "exceptions.hpp"
 #include "utils.hpp"
@@ -13,7 +14,7 @@
 using namespace pipeline;
 using namespace logger;
 
-Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher, externals::Hubber& hubber):
+Pipeline::Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher, externals::BaseHubber& hubber):
 dzieciotron::AsyncTask(),
 params(params),
 pipelineResult(pipelineResult),
@@ -87,43 +88,34 @@ void Pipeline::openVideo()
 void Pipeline::setDiode(bool on)
 {
 	this->gpioOutput << (on ? "1" : "0") << std::endl;
+	
+	//marnotrawi ramki przez określony czas
+	std::atomic_bool wastesFrames = true;
+	
+	//uruchom marnotrawstwo klatek
+	auto wasteFuture = std::async([this, &wastesFrames](){
+		while(wastesFrames)
+		{
+			this->videoCapture.grab();
+		}
+	});
+	//poczekaj na zmianę diody
+	std::this_thread::sleep_for(defines::diodeToggleTime);
+	//zatrzymaj marnowanie
+	wastesFrames = false;
+	wasteFuture.wait();
 }
 
 void Pipeline::updateBackground()
-{
-	//potrzeba jest aktywnie czytać klatki aby nie buforować ich
-	//można to zrobić na osobnym wątku, żeby nie wsadzać kodu do głównej pętli
-	
-	//marnotrawi ramki przez określony czas
-	auto wasteFunction = [this](){
-		std::atomic_bool wastesFrames = true;
-		
-		//uruchom marnotrawstwo klatek
-		auto wasteFuture = std::async([this, &wastesFrames](){
-			while(wastesFrames)
-			{
-				this->videoCapture.grab();
-			}
-		});
-		//poczekaj na zmianę diody
-		std::this_thread::sleep_for(defines::diodeToggleTime);
-		//zatrzymaj marnowanie
-		wastesFrames = false;
-		wasteFuture.wait();
-	};
-	
+{	
 	//zgaś diodę
 	this->setDiode(false);
-	//zmarnuj klatki
-	wasteFunction();
 	
 	//złap klatkę
 	this->background = this->getFrame();
 	
 	//zapal diodę
 	this->setDiode(true);
-	//i ponownie
-	wasteFunction();
 }
 
 cv::Mat Pipeline::getBackground()
@@ -254,6 +246,129 @@ void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 	}
 }
 
+std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::vector<cv::Point2f>& clusters)
+{
+	Logger::debug() << "Tworzenie detektywa " << index << " " << defines::detectiveNames.at(index) << " z klastrami " << clusters.size();
+	//wyłączenie diody
+	this->setDiode(false);
+	
+	//aktywacja oświetlenia w tle
+	std::atomic_bool turnsOn = true;
+	
+	auto turnOnFuture = std::async([this, &turnsOn](){
+		double value = 0.0;
+		this->lucipher.light(0.0);
+		while(turnsOn)
+		{
+			//poczekaj
+			std::this_thread::sleep_for(defines::lightOnTime);
+			//oblicz nową wartość
+			const double sleepSeconds = std::chrono::duration_cast<std::chrono::duration<double>>(defines::lightOnTime).count();
+			value = std::min(1.0, value + sleepSeconds * defines::lightOnSpeed);
+			//ustaw wartość
+			this->lucipher.light(value);
+		}
+	});
+	
+	std::optional<cv::Point2f> returnDetective;
+	
+	//próbkowanie obszaru klastra aby znaleźć kolor
+	while(true)
+	{
+		const cv::Mat frame = this->getFrame();
+		
+		
+		//wyznaczenie koła wokół środków klastrów
+		//TODO bardziej zaawansowany algorytm zakłada rozrośnięcie obszarów klastrów zamiast koła wokół środków
+		const unsigned int circleRadius = std::max(frame.cols, frame.rows) * defines::detectiveProbeRadiusFraction;
+		for(size_t cli = 0; cli < clusters.size(); cli++)
+		{
+			const cv::Point2f point = clusters.at(cli);
+			unsigned int pixelCount = 0;
+			cv::Vec3d sumColor(0, 0, 0);
+			for(int x = point.x - circleRadius; x <= point.x + circleRadius; x++)
+			{
+				for(int y = point.y - circleRadius; y <= point.y + circleRadius; y++)
+				{
+					if(x >= 0 && x <= frame.cols && y >= 0 && y <= frame.rows)
+					{
+						const cv::Vec3b color = frame.at<cv::Vec3b>(cv::Point(x, y));
+						sumColor += cv::Vec3d(color) / 255.0;
+						pixelCount++;
+					}
+				}
+			}
+			const cv::Vec3d averageColor = sumColor / static_cast<double>(pixelCount);
+			
+			//konwersja kolorów działa tylko na macierzach, więc trzeba stworzyć jednopikselową macierz trzykolorową
+			//dla konwersji bezpośrednio na wektorach funkcja się zawiesza
+			cv::Mat onePixelMat(1,1, CV_8UC3);
+			onePixelMat.at<cv::Vec3b>(0,0) = averageColor * 255;;
+			cv::Mat onePixelMatHls;
+			cv::cvtColor(onePixelMat, onePixelMatHls, cv::COLOR_BGR2HLS_FULL);
+			const cv::Vec3b averageHlsColorByte = onePixelMatHls.at<cv::Vec3b>(0,0);
+
+			//w macierzy H jest w zakresie 0..255, a chcemy w kątach
+			const double colorAngle = 360.0 * averageHlsColorByte[0] / 255.0;
+			const double colorLightness = averageHlsColorByte[1] / 255.0;
+			const double colorTarget = defines::detectiveColors.at(index);
+			
+			Logger::debug() << "Detektyw " << index << " kolor " << averageColor << " " << colorAngle << "° jasność " << colorLightness << " cel " << colorTarget << "°";
+			
+			if(colorLightness < defines::detectiveMinLightness)
+			{
+				//jasność jest za mała i odczyt będzie zbyt niedokładny, trzeba poczekać na rozjaśnienie diód
+				continue;
+			}
+			
+			const double distance = std::abs(colorAngle - colorTarget);
+			if(distance < defines::detectiveColorMaxDistance)
+			{
+				Logger::info() << "Detektyw " << index << " " << defines::detectiveNames.at(index) << " znaleziony na " << colorAngle << "°";
+				returnDetective = point;
+				break;
+			}
+		}
+		
+		if(returnDetective.has_value())
+		{
+			//już znaleziony
+			break;
+		}
+		
+		if(this->lucipher.light() >= 1.0)
+		{
+			Logger::warning() << "Detektyw " << index << " nie znaleziony po osiągnięciu maksymalnego oświetlenia";
+			break;
+		}
+	}
+	
+	//zatrzymaj rozjaśnianie
+	turnsOn = false;
+	turnOnFuture.wait();
+	
+	return(returnDetective);
+	
+	//TODO jeśli dwoje detektywów jest w tym samym miejscu, unieważnij obu
+}
+
+void Pipeline::submitResult(const cv::Mat& displayFrame)
+{
+	//zmień wielkość obrazu do podglądu
+	cv::Mat newFrame = displayFrame;
+	if(displayFrame.rows != defines::viewHeight || displayFrame.cols != defines::viewWidth)
+	{
+		cv::resize(displayFrame, newFrame, cv::Size(defines::viewWidth, defines::viewHeight));
+	}
+	assert(displayFrame.rows == defines::viewHeight);
+	assert(displayFrame.cols == defines::viewWidth);
+	
+	//synchronizuje dane
+	PipelineResult result;
+	result.view = newFrame;
+	this->pipelineResult.store(result);
+}
+
 void Pipeline::runLoop()
 {	
 	cv::Mat oneFrame = this->getFrame();
@@ -301,11 +416,10 @@ void Pipeline::runLoop()
 		auto& detective = this->detectives.at(i);
 		if(!detective.has_value())
 		{
-			Logger::debug() << "Tworzenie detektywa " << i;
-			//kolor na podstawie indeksu
-			//TODO konfiguracja kolorów
-			//FIXME na razie ustawianie ich na środku
-			detective = cv::Point2f(static_cast<float>(this->params.width / 2), static_cast<float>(this->params.height / 2));
+			//wyślij podgląd
+			this->submitResult(displayFrame);
+			//stwórz nowego
+			detective = this->createDetective(i, clusters);
 		}
 	}
 	
@@ -336,25 +450,8 @@ void Pipeline::runLoop()
 		}
 	}
 	
-	//FIXME
-	//oświetlenie
-	if (rand() % 100 < 3)
-	{
-		this->lucipher.light(rand() % 100 / 100.0);
-	}
-	
-	//zmień wielkość obrazu do podglądu
-	if(displayFrame.rows != defines::viewHeight || displayFrame.cols != defines::viewWidth)
-	{
-		cv::resize(displayFrame, displayFrame, cv::Size(defines::viewWidth, defines::viewHeight));
-	}
-	assert(displayFrame.rows == defines::viewHeight);
-	assert(displayFrame.cols == defines::viewWidth);
-	
-	//synchronizuje dane
-	PipelineResult result;
-	result.view = displayFrame;
-	this->pipelineResult.store(result);
+	//wyślij dane
+	this->submitResult(displayFrame);
 	
 	//aktualizuj czas
 	this->lastFrameTime = std::chrono::steady_clock::now();

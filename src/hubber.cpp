@@ -7,6 +7,7 @@ using namespace externals;
 using namespace logger;
 
 Hubber::Hubber(const defines::HubParams& params):
+BaseHubber(),
 params(params),
 isResetting(false),
 usbContext(nullptr, libusb_exit),

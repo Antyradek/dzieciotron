@@ -10,7 +10,7 @@
 #include "task.hpp"
 #include "defines.hpp"
 #include "lucipher.hpp"
-#include "hubber.hpp"
+#include "base_hubber.hpp"
 
 /// Funkcje do przetwarzania potokowego obszarów z jednej kamery
 namespace pipeline
@@ -31,7 +31,7 @@ private:
 	externals::Lucipher& lucipher;
 	
 	/// Resetowanie USB
-	externals::Hubber& hubber;
+	externals::BaseHubber& hubber;
 	
 	/// Główne połączenie z kamerą lub plikiem wideo
 	cv::VideoCapture videoCapture;
@@ -75,12 +75,18 @@ private:
 	/// Śledzi klastry przez detektywów
 	void trackDetectives(const std::vector<cv::Point2f>& clusters);
 	
+	/// Znajduje nowego i-tego detektywa
+	std::optional<cv::Point2f> createDetective(size_t index, const std::vector<cv::Point2f>& clusters);
+	
+	/// Wyślij ramkę do podglądu
+	void submitResult(const cv::Mat& displayFrame);
+	
 	/// Główna pętla
 	void runLoop() override;
 	
 public:
 	/// Potrzebuje pliku i typu kamery, umieszcza wyjście w podanym pliku atomowym
-	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher, externals::Hubber& hubber);
+	Pipeline(const defines::CameraCaptureParams& params, AtomicPipelineResult& pipelineResult, externals::Lucipher& lucipher, externals::BaseHubber& hubber);
 	
 	/// Zamyka połączenie do kamer i wyłącza diody
 	virtual ~Pipeline();

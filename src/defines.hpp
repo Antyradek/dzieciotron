@@ -171,11 +171,39 @@ namespace defines
 	/// Współczynnik prędkości przemieszczania się detektywów
 	const double detectiveSpeed = 5;
 	
-	/// Prędkość spadku oświetlenia
+	/// Prędkość spadku oświetlenia, spadek jasności na sekundę
 	const double lightFadeOffSpeed = 0.3;
 	
 	/// Ilość odświeżeń na sekundę światła
 	const double lightFps = 15;
+	
+	/// Prędkość wzrostu oświetlenia, wzrost jasności na sekundę
+	const double lightOnSpeed = 0.1;
+	
+	/// Czas pomiędzy kolejnymi zwiększeniami jasności światła
+	const std::chrono::milliseconds lightOnTime(500);
+	
+	/// Wielkość próbkowania koloru detektywa jako ułamek większego boku obrazu
+	const double detectiveProbeRadiusFraction = 0.1;
+	
+	/// Kolory markerów jako kąt w przestrzeni H
+	const std::array<double, 4> detectiveColors = {
+		25, //pomarańczowy
+		100, //zielony
+		200, //niebieski
+		250, //fioletowy
+	};
+	/// Nazwy kolejnych detektywów
+	const std::array<std::string, 4> detectiveNames = {
+		"Pomarańczowy",
+		"Zielony",
+		"Niebieski",
+		"Fioletowy",
+	};
+	/// Maksymalna tolerancja różnicy kolorów w przestrzeni H
+	const double detectiveColorMaxDistance = 5;
+	/// Minimalna jasność detektywa w przestrzeni L
+	const double detectiveMinLightness = 0.1;
 	
 	/// Funkcja opóźniająca detektywa
 	const std::function<double(double)> detectiveFunction = [](double x){
