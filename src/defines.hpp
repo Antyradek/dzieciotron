@@ -115,16 +115,16 @@ namespace defines
 	const std::chrono::milliseconds usbSetPowerTimeout(500);
 	
 	/// Czas przełączenia diody
-	const std::chrono::milliseconds diodeToggleTime(100);
+	const std::chrono::milliseconds diodeToggleTime(500);
 	
 	/// Czas maksymalnego czasu inicjalizacji kamer
-	const std::chrono::milliseconds maxVideoStartTime(5000);
+	const std::chrono::milliseconds maxVideoStartTime(15000);
 	
 	/// Czas oczekiwania po restarcie kamery
-	const std::chrono::milliseconds cameraResetTime(1000);
+	const std::chrono::milliseconds cameraResetTime(3000);
 	
 	/// Czas bootowania się kamer
-	const std::chrono::milliseconds cameraBootTime(2000);
+	const std::chrono::milliseconds cameraBootTime(4000);
 	
 	/// Wielkość jądra wygładzania
 	const unsigned int smoothKernelSize = 5;

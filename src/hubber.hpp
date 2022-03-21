@@ -38,6 +38,9 @@ private:
 	/// Ustaw zasilanie podanego huba
 	void setPower(struct libusb_device* hub, bool turnOn);
 	
+	/// Uruchom i się zawieś
+	void initializeLoop() override;
+	
 	/// Główna pętla
 	void runLoop() override;
 	

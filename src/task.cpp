@@ -19,7 +19,7 @@ void AsyncTask::stop()
 }
 
 void AsyncTask::pause(bool pause)
-{
+{	
 	//być może w C++20 dało by się użyć notify_all() ze std::atomic
 	//wtedy nie trzeba by mutexa i zmiennej warunkowej
 	if(pause)
@@ -39,6 +39,8 @@ void AsyncTask::run()
 	assert(!this->isWorkingFlag);
 	this->isWorkingFlag = true;
 	
+	this->initializeLoop();
+	
 	while(this->isWorkingFlag)
 	{
 		try
@@ -48,6 +50,10 @@ void AsyncTask::run()
 				//zawieszenie się na zmiennej
 				std::unique_lock<std::mutex> lock(this->pauseMutex);
 				this->pauseCondition.wait(lock, [this](){return(!this->isPaused);});
+			}
+			if(!this->isWorkingFlag)
+			{
+				break;
 			}
 			this->runLoop();
 		}

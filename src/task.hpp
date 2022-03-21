@@ -30,6 +30,9 @@ protected:
 	/// Ustawia czy wykonywanie ma być wstrzymane, może być wołane z osobnego wątku
 	void pause(bool pause);
 	
+	/// Wołane przed pierwszym wywołaniem pętli
+	virtual void initializeLoop() {}
+	
 	/// Wchodzi w główną pętlę
 	virtual void runLoop() = 0;
 	

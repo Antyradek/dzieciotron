@@ -14,3 +14,4 @@ void utils::openFile(const std::string& filename, std::ofstream& file)
 		throw(FileError("Błąd otwierania pliku " + filename));
 	}
 }
+

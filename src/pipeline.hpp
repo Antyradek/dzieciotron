@@ -81,6 +81,9 @@ private:
 	/// Wyślij ramkę do podglądu
 	void submitResult(const cv::Mat& displayFrame);
 	
+	/// Inicjalizacja pętli
+	void initializeLoop() override;
+	
 	/// Główna pętla
 	void runLoop() override;
 	

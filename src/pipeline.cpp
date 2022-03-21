@@ -25,20 +25,8 @@ gpioOutput(),
 background(),
 detectives(),
 detectiveHistory(),
-lastFrameTime(std::chrono::steady_clock::now())
-{
-	//wideo
-	this->openVideo();
-	
-	//GPIO
-	utils::openFile(defines::gpioControlFile(this->params.gpioPin), this->gpioOutput);
-	
-	//zaktualizuj tło
-	this->updateBackground();
-	
-	//wypisanie
-	Logger::debug() << "Ustawienia kamery: " << this->params.cameraFile << " " << this->params.width << "×" << this->params.height << "p" << this->params.fps << " → " << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << this->params.gpioPin;
-}
+lastFrameTime()
+{}
 
 Pipeline::~Pipeline()
 {
@@ -70,9 +58,9 @@ void Pipeline::openVideo()
 			set = true;
 			break;
 		}
-		catch(const DzieciotronError& err)
+		catch(const cv::Exception& err)
 		{
-			Logger::error() << "Błąd inicjalizacji kamer: " << err.what();
+			Logger::error() << "Błąd inicjalizacji kamery " << this->params.cameraFile << ": " << err.what();
 			this->hubber.reset();
 			std::this_thread::sleep_for(defines::cameraResetTime);
 		}
@@ -249,6 +237,9 @@ void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::vector<cv::Point2f>& clusters)
 {
 	Logger::debug() << "Tworzenie detektywa " << index << " " << defines::detectiveNames.at(index) << " z klastrami " << clusters.size();
+	
+	std::optional<cv::Point2f> returnDetective;
+	
 	//wyłączenie diody
 	this->setDiode(false);
 	
@@ -270,13 +261,15 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 		}
 	});
 	
-	std::optional<cv::Point2f> returnDetective;
-	
 	//próbkowanie obszaru klastra aby znaleźć kolor
 	while(true)
 	{
 		const cv::Mat frame = this->getFrame();
 		
+		if(clusters.empty())
+		{
+			break;
+		}
 		
 		//wyznaczenie koła wokół środków klastrów
 		//TODO bardziej zaawansowany algorytm zakłada rozrośnięcie obszarów klastrów zamiast koła wokół środków
@@ -328,6 +321,8 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 				returnDetective = point;
 				break;
 			}
+			
+			//this->submitResult(frame);
 		}
 		
 		if(returnDetective.has_value())
@@ -347,6 +342,9 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 	turnsOn = false;
 	turnOnFuture.wait();
 	
+	//włącz diodę ponownie
+	this->setDiode(true);
+	
 	return(returnDetective);
 	
 	//TODO jeśli dwoje detektywów jest w tym samym miejscu, unieważnij obu
@@ -360,13 +358,32 @@ void Pipeline::submitResult(const cv::Mat& displayFrame)
 	{
 		cv::resize(displayFrame, newFrame, cv::Size(defines::viewWidth, defines::viewHeight));
 	}
-	assert(displayFrame.rows == defines::viewHeight);
-	assert(displayFrame.cols == defines::viewWidth);
+	assert(newFrame.rows == defines::viewHeight);
+	assert(newFrame.cols == defines::viewWidth);
 	
 	//synchronizuje dane
 	PipelineResult result;
 	result.view = newFrame;
 	this->pipelineResult.store(result);
+}
+
+void Pipeline::initializeLoop()
+{
+	//inicjalizacja wymaga działających innych zadań
+	
+	//wideo
+	this->openVideo();
+	
+	//GPIO
+	utils::openFile(defines::gpioControlFile(this->params.gpioPin), this->gpioOutput);
+	
+	//zaktualizuj tło
+	this->updateBackground();
+	
+	//wypisanie
+	Logger::debug() << "Ustawienia kamery: " << this->params.cameraFile << " " << this->params.width << "×" << this->params.height << "p" << this->params.fps << " → " << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_WIDTH) << "×" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FRAME_HEIGHT) << "p" << this->videoCapture.get(cv::VideoCaptureProperties::CAP_PROP_FPS) << " GPIO-" << this->params.gpioPin;
+
+	this->lastFrameTime = std::chrono::steady_clock::now();
 }
 
 void Pipeline::runLoop()
@@ -417,7 +434,7 @@ void Pipeline::runLoop()
 		if(!detective.has_value())
 		{
 			//wyślij podgląd
-			this->submitResult(displayFrame);
+			//this->submitResult(displayFrame);
 			//stwórz nowego
 			detective = this->createDetective(i, clusters);
 		}

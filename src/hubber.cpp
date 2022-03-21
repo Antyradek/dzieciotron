@@ -16,8 +16,6 @@ usbDevicesCount(0),
 hardwareHub(nullptr),
 softwareHub(nullptr)
 {
-	this->pause(true);
-	
 	//kontekst USB
 	this->usbContext.reset([](){
 		libusb_context* context;
@@ -28,7 +26,42 @@ softwareHub(nullptr)
 		}
 		return(context);
 	}());
+}
+
+void Hubber::setPower(struct libusb_device* hub, bool turnOn)
+{
+	std::unique_ptr<libusb_device_handle, std::function<void(libusb_device_handle*)>> device([&hub](){
+		libusb_device_handle* handle;
+		const int outerr = libusb_open(hub, &handle);
+		if(outerr != 0)
+		{
+			throw(UsbError("Błąd uzyskiwania uchwytu urządzenia USB"));
+		}
+		return(handle);
+	}(), libusb_close);
 	
+	//uchwyt, typ, żądanie, flaga_featura, port, dane, wielkość_danych, timeout_ms
+	const libusb_standard_request requestType = turnOn ? LIBUSB_REQUEST_SET_FEATURE : LIBUSB_REQUEST_CLEAR_FEATURE;
+	const int outerr = libusb_control_transfer(device.get(), LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_OTHER, requestType, this->params.powerFlag, this->params.port, nullptr, 0, std::chrono::milliseconds(defines::usbSetPowerTimeout).count());
+	if(outerr < 0)
+	{
+		throw(UsbError("Błąd wysyłania komendy kontroli USB"));
+	}
+	libusb_reset_device(device.get());
+}
+
+void Hubber::reset()
+{
+	if(!this->isResetting)
+	{
+		Logger::debug() << "Polecenie zresetowania huba";
+		this->isResetting = true;
+		this->pause(false);
+	}
+}
+
+void Hubber::initializeLoop()
+{
 	//lista urządzeń USB
 	this->usbDevices.reset([this](){
 		libusb_device** devices;
@@ -59,36 +92,9 @@ softwareHub(nullptr)
 			this->softwareHub = this->usbDevices[i];
 		}
 	}
-}
-
-void Hubber::setPower(struct libusb_device* hub, bool turnOn)
-{
-	std::unique_ptr<libusb_device_handle, std::function<void(libusb_device_handle*)>> device([&hub](){
-		libusb_device_handle* handle;
-		const int outerr = libusb_open(hub, &handle);
-		if(outerr != 0)
-		{
-			throw(UsbError("Błąd uzyskiwania uchwytu urządzenia USB"));
-		}
-		return(handle);
-	}(), libusb_close);
-	
-	//uchwyt, typ, żądanie, flaga_featura, port, dane, wielkość_danych, timeout_ms
-	const libusb_standard_request requestType = turnOn ? LIBUSB_REQUEST_SET_FEATURE : LIBUSB_REQUEST_CLEAR_FEATURE;
-	const int outerr = libusb_control_transfer(device.get(), LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_OTHER, requestType, this->params.powerFlag, this->params.port, nullptr, 0, std::chrono::milliseconds(defines::usbSetPowerTimeout).count());
-	if(outerr < 0)
-	{
-		throw(UsbError("Błąd wysyłania komendy kontroli USB"));
-	}
-	libusb_reset_device(device.get());
-}
-
-void Hubber::reset()
-{
 	if(!this->isResetting)
 	{
-		this->isResetting = true;
-		this->pause(false);
+		this->pause(true);
 	}
 }
 

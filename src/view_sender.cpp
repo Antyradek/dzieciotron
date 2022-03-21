@@ -41,7 +41,7 @@ ViewSender::~ViewSender()
 	//ta operacja może się nie udać jeśli ktoś czyta
 	unlink(this->pipeName.c_str());
 	
-	Logger::debug() << "Zamyknięto potok";
+	Logger::debug() << "Zamknięto potok";
 }
 
 void ViewSender::runLoop()
