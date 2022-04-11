@@ -2,6 +2,7 @@
 #include <string>
 #include <algorithm>
 #include <cstdint>
+#include <tuple>
 
 /// Generalne ustawienia programu
 namespace defines
@@ -172,7 +173,7 @@ namespace defines
 	const double detectiveSpeed = 5;
 	
 	/// Prędkość spadku oświetlenia, spadek jasności na sekundę
-	const double lightFadeOffSpeed = 0.3;
+	const double lightFadeOffSpeed = 0.1;
 	
 	/// Ilość odświeżeń na sekundę światła
 	const double lightFps = 15;
@@ -181,10 +182,10 @@ namespace defines
 	const double lightOnSpeed = 0.1;
 	
 	/// Czas pomiędzy kolejnymi zwiększeniami jasności światła
-	const std::chrono::milliseconds lightOnTime(500);
+	const std::chrono::milliseconds lightOnTime(200);
 	
 	/// Wielkość próbkowania koloru detektywa jako ułamek większego boku obrazu
-	const double detectiveProbeRadiusFraction = 0.1;
+	const double detectiveProbeRadiusFraction = 0.02;
 	
 	/// Kolory markerów jako kąt w przestrzeni H
 	const std::array<double, 4> detectiveColors = {
@@ -199,6 +200,15 @@ namespace defines
 		"Zielony",
 		"Niebieski",
 		"Fioletowy",
+	};
+	/// Kolory do wyświetlenia detektywów na ekranie w formacie RGB
+	const std::array<std::tuple<unsigned int, unsigned int, unsigned int>, 4> detectiveViewColors = {
+		{
+			{255, 128, 0},
+			{84, 255, 0},
+			{0, 169, 255},
+			{42, 0, 255},
+		}
 	};
 	/// Maksymalna tolerancja różnicy kolorów w przestrzeni H
 	const double detectiveColorMaxDistance = 5;
@@ -215,5 +225,7 @@ namespace defines
 		//const double width = 2.6;
 		//return(2.1 * width * (x + 0.4) / std::pow(2, width * (x + 0.4)));
 	};
+	/// Szerokość linii pomocniczych jako ułamek wielkości obrazu
+	const double debugMarkerLineWidth = 0.007;
 	
 }

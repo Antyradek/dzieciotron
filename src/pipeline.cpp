@@ -283,7 +283,8 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 			{
 				for(int y = point.y - circleRadius; y <= point.y + circleRadius; y++)
 				{
-					if(x >= 0 && x <= frame.cols && y >= 0 && y <= frame.rows)
+					//w kole wokół klastra oraz w granicach obrazu
+					if(static_cast<unsigned int>((point.x - x) * (point.x - x) + (point.y - y) * (point.y - y)) <= circleRadius * circleRadius && x >= 0 && x <= frame.cols && y >= 0 && y <= frame.rows)
 					{
 						const cv::Vec3b color = frame.at<cv::Vec3b>(cv::Point(x, y));
 						sumColor += cv::Vec3d(color) / 255.0;
@@ -293,10 +294,14 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 			}
 			const cv::Vec3d averageColor = sumColor / static_cast<double>(pixelCount);
 			
+			//narysuj debugowo na ramce
+			const unsigned int markerWidth = defines::debugMarkerLineWidth * frame.cols;
+			cv::circle(frame, point, circleRadius + markerWidth, cv::Scalar(averageColor * 255), markerWidth);
+			
 			//konwersja kolorów działa tylko na macierzach, więc trzeba stworzyć jednopikselową macierz trzykolorową
 			//dla konwersji bezpośrednio na wektorach funkcja się zawiesza
 			cv::Mat onePixelMat(1,1, CV_8UC3);
-			onePixelMat.at<cv::Vec3b>(0,0) = averageColor * 255;;
+			onePixelMat.at<cv::Vec3b>(0,0) = averageColor * 255;
 			cv::Mat onePixelMatHls;
 			cv::cvtColor(onePixelMat, onePixelMatHls, cv::COLOR_BGR2HLS_FULL);
 			const cv::Vec3b averageHlsColorByte = onePixelMatHls.at<cv::Vec3b>(0,0);
@@ -306,7 +311,7 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 			const double colorLightness = averageHlsColorByte[1] / 255.0;
 			const double colorTarget = defines::detectiveColors.at(index);
 			
-			Logger::debug() << "Detektyw " << index << " kolor " << averageColor << " " << colorAngle << "° jasność " << colorLightness << " cel " << colorTarget << "°";
+			Logger::debug() << "Kamera " << this->params.cameraFile << " detektyw " << index << " " << utils::printHexColor(averageColor[2], averageColor[1], averageColor[0]) << " " << colorAngle << "° jasność " << colorLightness << " cel " << colorTarget << "°";
 			
 			if(colorLightness < defines::detectiveMinLightness)
 			{
@@ -321,9 +326,9 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 				returnDetective = point;
 				break;
 			}
-			
-			//this->submitResult(frame);
 		}
+		
+		this->submitResult(frame);
 		
 		if(returnDetective.has_value())
 		{
@@ -392,7 +397,7 @@ void Pipeline::runLoop()
 	
 	//klatka do podglądu
 	cv::Mat displayFrame = oneFrame.clone();
-	const unsigned int markersWidth = displayFrame.cols / 150;
+	const unsigned int markersWidth = defines::debugMarkerLineWidth * displayFrame.cols;
 	const unsigned int markersSize = displayFrame.cols / 40;
 	
 	//odejmij tło od obrazu
@@ -451,7 +456,7 @@ void Pipeline::runLoop()
 		{
 			if(lastDetective.get().at(i).has_value() && detectives.at(i).has_value())
 			{
-				cv::line(displayFrame, lastDetective.get().at(i).value(), detectives.at(i).value(), cv::Scalar(127, 127, 255), markersWidth);
+				cv::line(displayFrame, lastDetective.get().at(i).value(), detectives.at(i).value(), cv::Scalar(std::get<2>(defines::detectiveViewColors.at(i)), std::get<1>(defines::detectiveViewColors.at(i)), std::get<0>(defines::detectiveViewColors.at(i))), markersWidth);
 			}
 		}
 		
@@ -463,7 +468,7 @@ void Pipeline::runLoop()
 	{
 		if(this->detectives.at(i).has_value())
 		{
-			cv::circle(displayFrame, this->detectives.at(i).value(), markersSize, cv::Scalar(127, 255.0 * i / this->detectives.size(), 255), markersWidth);
+			cv::circle(displayFrame, this->detectives.at(i).value(), markersSize, cv::Scalar(std::get<2>(defines::detectiveViewColors.at(i)), std::get<1>(defines::detectiveViewColors.at(i)), std::get<0>(defines::detectiveViewColors.at(i))), markersWidth);
 		}
 	}
 	
