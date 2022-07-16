@@ -183,7 +183,18 @@ std::vector<cv::Point2f> Pipeline::findClusters(const cv::Mat& binaryFrame, std:
 void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 {
 	//odległości detektyw i klaster
-	std::vector<std::tuple<double, std::reference_wrapper<const cv::Point2f>, std::reference_wrapper<const std::optional<cv::Point2f>>, std::reference_wrapper<const cv::Point2f>>> distances;
+	struct DetectiveDistances
+	{
+		//odległość między detektywem, a klastrem
+		double distance;
+		//punkt detektywa
+		std::reference_wrapper<const cv::Point2f> detective;
+		//referencja na detektywa z głównej tablicy
+		std::reference_wrapper<const std::optional<cv::Point2f>> detectiveRef;
+		//punkt klastra
+		std::reference_wrapper<const cv::Point2f> cluster;
+	};
+	std::vector<DetectiveDistances> distances;
 	
 	//umieść odległości
 	for(const std::optional<cv::Point2f>& detective : this->detectives)
@@ -193,14 +204,14 @@ void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 			for(const cv::Point2f& cluster : clusters)
 			{
 				const double distance = cv::norm(detective.value() - cluster);
-				distances.emplace_back(distance, std::cref(detective.value()), std::cref(detective), std::cref(cluster));
+				distances.push_back({distance, std::cref(detective.value()), std::cref(detective), std::cref(cluster)});
 			}
 		}
 	}
 	
 	//posortuj
 	std::sort(distances.begin(), distances.end(), [](auto& a, auto& b){
-		return(std::get<0>(a) < std::get<0>(b));
+		return(a.distance < b.distance);
 	});
 	
 	//weź kolejne najkrótsze
@@ -220,7 +231,7 @@ void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 		
 		//usuń wszystkie z listy
 		distances.erase(std::remove_if(distances.begin(), distances.end(), [&detectiveRef, &cluster](auto& v){
-			return(std::get<2>(v).get() == detectiveRef.get() or std::get<3>(v).get() == cluster.get());
+			return(v.detectiveRef.get() == detectiveRef.get() or v.cluster.get() == cluster.get());
 		}), distances.end());
 	}
 	
@@ -271,6 +282,15 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 			break;
 		}
 		
+		//odległość kątowa między zmierzonym kolorem, a docelowym
+		struct ColorDistance
+		{
+			double readAngle;
+			double targetAngle;
+			double distance;
+		};
+		std::vector<ColorDistance> colorDistances;
+		
 		//wyznaczenie koła wokół środków klastrów
 		//TODO bardziej zaawansowany algorytm zakłada rozrośnięcie obszarów klastrów zamiast koła wokół środków
 		const unsigned int circleRadius = std::max(frame.cols, frame.rows) * defines::detectiveProbeRadiusFraction;
@@ -318,6 +338,9 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 				//jasność jest za mała i odczyt będzie zbyt niedokładny, trzeba poczekać na rozjaśnienie diód
 				continue;
 			}
+			
+			//porównanie z ustalonymi kolorami
+			//dla każdej konfiguracji czujnika i koloru oblicz odległość między nimi
 			
 			const double distance = std::abs(colorAngle - colorTarget);
 			if(distance < defines::detectiveColorMaxDistance)

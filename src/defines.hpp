@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <tuple>
+#include <functional>
 
 /// Generalne ustawienia programu
 namespace defines
