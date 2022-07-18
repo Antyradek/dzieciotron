@@ -5,3 +5,6 @@
 |____//___|_|\___|\___|_|\___/ \__|_|  \___/|_| |_|
                                                    
 Używając OpenCV i magii, próbujemy zrobić magisterkę.
+
+Układ 3 kamer, każda ma diodę podczerwieni, która nie powinna wpływać na oświetlenie innych kamer.
+Dodatkowo wspólne oświetlenie białymi diodami.

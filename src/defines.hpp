@@ -98,10 +98,10 @@ namespace defines
 	const CameraCaptureParams centerCameraParams("/dev/video0", 320, 240, 60, 15, false, 0.3);
 	
 	/// Parametry lewej kamery
-	const CameraCaptureParams leftCameraParams("/dev/video3", 1280, 720, 30, 7, false, 0.5);
+	const CameraCaptureParams leftCameraParams("/dev/video3", 1280, 720, 30, 7, false, 0.4);
 	
 	/// Parametry prawej kamery
-	const CameraCaptureParams rightCameraParams("/dev/video1", 1280, 720, 30, 21, true, 0.5);
+	const CameraCaptureParams rightCameraParams("/dev/video1", 1280, 720, 30, 21, true, 0.4);
 	
 	/// Parametry oświetlenia
 #ifndef GUI_DEBUG
@@ -202,8 +202,15 @@ namespace defines
 		"Niebieski",
 		"Fioletowy",
 	};
+	/// Kolor wyświetlany dla detektywa
+	struct DetectiveViewColor
+	{
+		unsigned int red;
+		unsigned int green;
+		unsigned int blue;
+	};
 	/// Kolory do wyświetlenia detektywów na ekranie w formacie RGB
-	const std::array<std::tuple<unsigned int, unsigned int, unsigned int>, 4> detectiveViewColors = {
+	const std::array<DetectiveViewColor, 4> detectiveViewColors = {
 		{
 			{255, 128, 0},
 			{84, 255, 0},
@@ -211,8 +218,6 @@ namespace defines
 			{42, 0, 255},
 		}
 	};
-	/// Maksymalna tolerancja różnicy kolorów w przestrzeni H
-	const double detectiveColorMaxDistance = 5;
 	/// Minimalna jasność detektywa w przestrzeni L
 	const double detectiveMinLightness = 0.1;
 	

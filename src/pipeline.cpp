@@ -216,7 +216,7 @@ void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 	
 	//weź kolejne najkrótsze
 	//jeśli klastrów jest mniej, to niektórzy detektywni zostaną nieruszeni
-	while(not distances.empty())
+	while(!distances.empty())
 	{
 		auto [distance, detective, detectiveRef, cluster] = distances.front();
 		//znormalizuj dystans w stosunku do wielkości ekranu
@@ -231,7 +231,7 @@ void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 		
 		//usuń wszystkie z listy
 		distances.erase(std::remove_if(distances.begin(), distances.end(), [&detectiveRef, &cluster](auto& v){
-			return(v.detectiveRef.get() == detectiveRef.get() or v.cluster.get() == cluster.get());
+			return(v.detectiveRef.get() == detectiveRef.get() || v.cluster.get() == cluster.get());
 		}), distances.end());
 	}
 	
@@ -245,11 +245,11 @@ void Pipeline::trackDetectives(const std::vector<cv::Point2f>& clusters)
 	}
 }
 
-std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::vector<cv::Point2f>& clusters)
+void Pipeline::createDetectives(const std::vector<cv::Point2f>& clusters)
 {
-	Logger::debug() << "Tworzenie detektywa " << index << " " << defines::detectiveNames.at(index) << " z klastrami " << clusters.size();
+	assert(!clusters.empty());
 	
-	std::optional<cv::Point2f> returnDetective;
+	Logger::debug() << "Tworzenie detektywów " << this->params.cameraFile;
 	
 	//wyłączenie diody
 	this->setDiode(false);
@@ -277,17 +277,17 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 	{
 		const cv::Mat frame = this->getFrame();
 		
-		if(clusters.empty())
-		{
-			break;
-		}
-		
 		//odległość kątowa między zmierzonym kolorem, a docelowym
 		struct ColorDistance
 		{
+			//odczytany kąt koloru
 			double readAngle;
-			double targetAngle;
+			//indeks docelowego detektywa
+			size_t targetIndex;
+			//odległość kątowa
 			double distance;
+			//punkt
+			cv::Point2f point;
 		};
 		std::vector<ColorDistance> colorDistances;
 		
@@ -325,43 +325,69 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 			cv::Mat onePixelMatHls;
 			cv::cvtColor(onePixelMat, onePixelMatHls, cv::COLOR_BGR2HLS_FULL);
 			const cv::Vec3b averageHlsColorByte = onePixelMatHls.at<cv::Vec3b>(0,0);
-
+			
 			//w macierzy H jest w zakresie 0..255, a chcemy w kątach
 			const double colorAngle = 360.0 * averageHlsColorByte[0] / 255.0;
 			const double colorLightness = averageHlsColorByte[1] / 255.0;
-			const double colorTarget = defines::detectiveColors.at(index);
 			
-			Logger::debug() << "Kamera " << this->params.cameraFile << " detektyw " << index << " " << utils::printHexColor(averageColor[2], averageColor[1], averageColor[0]) << " " << colorAngle << "° jasność " << colorLightness << " cel " << colorTarget << "°";
-			
-			if(colorLightness < defines::detectiveMinLightness)
+			//nie rozpatrujemy zbyt ciemnych próbek
+			if(colorLightness > defines::detectiveMinLightness)
 			{
-				//jasność jest za mała i odczyt będzie zbyt niedokładny, trzeba poczekać na rozjaśnienie diód
-				continue;
+				//wypełnij tablicę odległości
+				for(size_t detectiveIndex = 0; detectiveIndex < defines::detectiveColors.size(); detectiveIndex++)
+				{
+					const double colorTarget = defines::detectiveColors.at(detectiveIndex);
+					double distance = std::abs(colorAngle - colorTarget);
+					//odwrócenie kąta
+					if(distance > 180.0)
+					{
+						distance = 350.0 - distance;
+					}
+					colorDistances.push_back({colorAngle, detectiveIndex, distance, point});
+				}
 			}
 			
-			//porównanie z ustalonymi kolorami
-			//dla każdej konfiguracji czujnika i koloru oblicz odległość między nimi
+			Logger::debug() << "Kamera " << this->params.cameraFile << " " << utils::printHexColor(averageColor[2], averageColor[1], averageColor[0]) << " " << colorAngle << "° jasność " << colorLightness;
+		}
+		
+		//posortuj po odległości
+		std::sort(colorDistances.begin(), colorDistances.end(), [](const auto& a, const auto& b){return(a.distance < b.distance);});
+		
+		unsigned int foundDetectivesCount = 0;
+		//przyporządkowanie detektywów do punktów od najmniejszej odległości
+		while(!colorDistances.empty())
+		{
+			auto [angle, index, distance, point] = colorDistances.front();
 			
-			const double distance = std::abs(colorAngle - colorTarget);
-			if(distance < defines::detectiveColorMaxDistance)
+			if(this->detectives.at(index).has_value())
 			{
-				Logger::info() << "Detektyw " << index << " " << defines::detectiveNames.at(index) << " znaleziony na " << colorAngle << "°";
-				returnDetective = point;
-				break;
+				Logger::debug() << "Detektyw " << this->params.cameraFile << " " << index << " zastąpiony " << this->detectives.at(index).value() << " → " << point;
 			}
+			else
+			{
+				Logger::debug() << "Detektyw " << this->params.cameraFile << " " << index << " odnaleziony " << point;
+			}
+			
+			this->detectives.at(index) = point;
+			foundDetectivesCount++;
+			
+			//usuń wszystkie o tym kolorze i detektywie z listy
+			colorDistances.erase(std::remove_if(colorDistances.begin(), colorDistances.end(), [&index, &angle](auto& v){
+				return(v.targetIndex == index || v.readAngle == angle);
+			}), colorDistances.end());
 		}
 		
 		this->submitResult(frame);
 		
-		if(returnDetective.has_value())
+		if(this->lucipher.light() >= 1.0)
 		{
-			//już znaleziony
+			Logger::warning() << "Detektywi nie znalezieni po osiągnięciu maksymalnego oświetlenia";
 			break;
 		}
 		
-		if(this->lucipher.light() >= 1.0)
+		if(foundDetectivesCount == clusters.size())
 		{
-			Logger::warning() << "Detektyw " << index << " nie znaleziony po osiągnięciu maksymalnego oświetlenia";
+			Logger::debug() << "Znaleziono wszystkie " << foundDetectivesCount << " detektywów dla " << this->params.cameraFile;
 			break;
 		}
 	}
@@ -372,10 +398,6 @@ std::optional<cv::Point2f> Pipeline::createDetective(size_t index, const std::ve
 	
 	//włącz diodę ponownie
 	this->setDiode(true);
-	
-	return(returnDetective);
-	
-	//TODO jeśli dwoje detektywów jest w tym samym miejscu, unieważnij obu
 }
 
 void Pipeline::submitResult(const cv::Mat& displayFrame)
@@ -418,21 +440,21 @@ void Pipeline::runLoop()
 {	
 	cv::Mat oneFrame = this->getFrame();
 	
+	//odejmij tło od obrazu
+	oneFrame = oneFrame - this->getBackground();
+	
 	//klatka do podglądu
 	cv::Mat displayFrame = oneFrame.clone();
 	const unsigned int markersWidth = defines::debugMarkerLineWidth * displayFrame.cols;
 	const unsigned int markersSize = displayFrame.cols / 40;
 	
-	//odejmij tło od obrazu
-	oneFrame = oneFrame - this->getBackground();
-	
 	//filtr medianowy
 	//TODO to jest strasznie ciężkie, może dało by się bez albo sprzętowo NEONem
 	//TODO filtr bilateralny?
-	static_assert(defines::smoothKernelSize % 2 == 1);
+// 	static_assert(defines::smoothKernelSize % 2 == 1);
 // 	cv::medianBlur(oneFrame, smoothFrame, defines::smoothKernelSize);
 	//FIXME na razie zwykłe rozmycie
-	cv::blur(oneFrame, oneFrame, cv::Size(5, 5));
+// 	cv::blur(oneFrame, oneFrame, cv::Size(5, 5));
 	
 	//przekształcenia kolorów i progowanie
 	cv::Mat binaryFrame = this->thresholdLuminance(oneFrame);
@@ -456,15 +478,18 @@ void Pipeline::runLoop()
 	}
 	
 	//zlokalizuj detektywów
-	for(size_t i = 0; i < this->detectives.size(); i++)
+	if(!clusters.empty())
 	{
-		auto& detective = this->detectives.at(i);
-		if(!detective.has_value())
+		for(size_t i = 0; i < this->detectives.size(); i++)
 		{
-			//wyślij podgląd
-			//this->submitResult(displayFrame);
-			//stwórz nowego
-			detective = this->createDetective(i, clusters);
+			if(!this->detectives.at(i).has_value())
+			{
+				//wyślij podgląd aktualnej ramki
+				this->submitResult(displayFrame);
+				//stwórz detektywów na nowo
+				this->createDetectives(clusters);
+				break;
+			}
 		}
 	}
 	
@@ -479,7 +504,7 @@ void Pipeline::runLoop()
 		{
 			if(lastDetective.get().at(i).has_value() && detectives.at(i).has_value())
 			{
-				cv::line(displayFrame, lastDetective.get().at(i).value(), detectives.at(i).value(), cv::Scalar(std::get<2>(defines::detectiveViewColors.at(i)), std::get<1>(defines::detectiveViewColors.at(i)), std::get<0>(defines::detectiveViewColors.at(i))), markersWidth);
+				cv::line(displayFrame, lastDetective.get().at(i).value(), detectives.at(i).value(), cv::Scalar(defines::detectiveViewColors.at(i).blue, defines::detectiveViewColors.at(i).green, defines::detectiveViewColors.at(i).red), markersWidth);
 			}
 		}
 		
@@ -491,7 +516,7 @@ void Pipeline::runLoop()
 	{
 		if(this->detectives.at(i).has_value())
 		{
-			cv::circle(displayFrame, this->detectives.at(i).value(), markersSize, cv::Scalar(std::get<2>(defines::detectiveViewColors.at(i)), std::get<1>(defines::detectiveViewColors.at(i)), std::get<0>(defines::detectiveViewColors.at(i))), markersWidth);
+			cv::circle(displayFrame, this->detectives.at(i).value(), markersSize, cv::Scalar(defines::detectiveViewColors.at(i).blue, defines::detectiveViewColors.at(i).green, defines::detectiveViewColors.at(i).red), markersWidth);
 		}
 	}
 	

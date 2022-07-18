@@ -75,8 +75,8 @@ private:
 	/// Śledzi klastry przez detektywów
 	void trackDetectives(const std::vector<cv::Point2f>& clusters);
 	
-	/// Znajduje nowego i-tego detektywa
-	std::optional<cv::Point2f> createDetective(size_t index, const std::vector<cv::Point2f>& clusters);
+	/// Znajduje na nowo wszystkich detektywów
+	void createDetectives(const std::vector<cv::Point2f>& clusters);
 	
 	/// Wyślij ramkę do podglądu
 	void submitResult(const cv::Mat& displayFrame);
